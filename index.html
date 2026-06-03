@@ -4344,6 +4344,14 @@ let currentUser = null;
 let currentRole = null;
 
 async function initAuth(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const tokenFromPortal = urlParams.get('token');
+  const refreshFromPortal = urlParams.get('refresh');
+  if(tokenFromPortal && refreshFromPortal){
+    await sb.auth.setSession({ access_token: tokenFromPortal, refresh_token: refreshFromPortal });
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   const { data } = await sb.auth.getSession();
   if(data?.session?.user){
     currentUser = data.session.user;
