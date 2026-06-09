@@ -381,6 +381,16 @@ body.light .hdr-tab.active { background: var(--red); }
 <body>
 
 <!-- LOADING -->
+<div id="new-password-modal" style="display:none;position:fixed;inset:0;background:#0d0d0d;z-index:1001;align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:28px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:#c9920a;">Set New Password</div>
+    <div style="font-size:0.8rem;color:#888;line-height:1.5;">Enter your new password below.</div>
+    <input type="password" id="new-password-input" placeholder="New password" style="width:100%;background:#111;border:1px solid #333;color:white;padding:10px 12px;border-radius:6px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+    <input type="password" id="new-password-confirm" placeholder="Confirm new password" style="width:100%;background:#111;border:1px solid #333;color:white;padding:10px 12px;border-radius:6px;font-size:0.9rem;outline:none;box-sizing:border-box;">
+    <div id="new-password-err" style="color:#c8102e;font-size:0.75rem;display:none;"></div>
+    <button onclick="submitNewPassword()" style="width:100%;padding:11px;background:#c9920a;border:none;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;cursor:pointer;color:#fff;">Update Password</button>
+  </div>
+</div>
 <div id="cp-loading" style="display:flex;position:fixed;inset:0;background:#0d0d0d;z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
   <img src="https://raw.githubusercontent.com/barestkd-cyber/curriculum/main/BaresTKDPatch.png" style="width:80px;opacity:0.7;" onerror="this.style.display='none'">
   <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;letter-spacing:3px;color:#888;">LOADING...</div>
@@ -4345,6 +4355,19 @@ let currentUser = null;
 let currentRole = null;
 
 async function initAuth(){
+  const hash = window.location.hash;
+  if(hash && hash.includes('type=recovery')){
+    const params = new URLSearchParams(hash.replace('#',''));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if(accessToken && refreshToken){
+      await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      window.history.replaceState({}, document.title, window.location.pathname);
+      document.getElementById('cp-loading').style.display = 'none';
+      document.getElementById('new-password-modal').style.display = 'flex';
+      return;
+    }
+  }
   const urlParams = new URLSearchParams(window.location.search);
   const tokenFromPortal = urlParams.get('token');
   const refreshFromPortal = urlParams.get('refresh');
@@ -4352,7 +4375,6 @@ async function initAuth(){
     await sb.auth.setSession({ access_token: tokenFromPortal, refresh_token: refreshFromPortal });
     window.history.replaceState({}, document.title, window.location.pathname);
   }
-
   const { data } = await sb.auth.getSession();
   if(data?.session?.user){
     currentUser = data.session.user;
@@ -4362,6 +4384,23 @@ async function initAuth(){
     document.getElementById('cp-loading').style.display = 'none';
     document.getElementById('cp-login').style.display = 'flex';
   }
+}
+
+async function submitNewPassword(){
+  const pw = document.getElementById('new-password-input').value;
+  const confirm = document.getElementById('new-password-confirm').value;
+  const err = document.getElementById('new-password-err');
+  err.style.display = 'none';
+  if(!pw || pw.length < 6){ err.textContent = 'Password must be at least 6 characters.'; err.style.display = 'block'; return; }
+  if(pw !== confirm){ err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if(error){ err.textContent = 'Error updating password. Please try again.'; err.style.display = 'block'; return; }
+  alert('Password updated! You are now signed in.');
+  document.getElementById('new-password-modal').style.display = 'none';
+  const { data } = await sb.auth.getSession();
+  currentUser = data.session.user;
+  await loadUserProfile();
+  showCpApp();
 }
 
 function showCpApp(){
