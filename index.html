@@ -406,6 +406,7 @@ body.light .hdr-tab.active { background: var(--red); }
     <div id="cp-login-err" style="color:#c8102e;font-size:0.75rem;margin-bottom:10px;display:none;">Incorrect email or password.</div>
     <button onclick="doCpLogin()" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;letter-spacing:3px;cursor:pointer;color:#111;">Sign In</button>
     <div style="text-align:center;margin-top:14px;font-size:0.75rem;color:#888;">Access restricted to instructors and admin.</div>
+    <div style="text-align:center;margin-top:8px;font-size:0.75rem;"><span onclick="doPasswordReset()" style="color:#888;cursor:pointer;text-decoration:underline;">Forgot password?</span></div>
   </div>
 </div>
 
@@ -4366,6 +4367,16 @@ async function initAuth(){
 function showCpApp(){
   document.getElementById('cp-loading').style.display = 'none';
   document.getElementById('cp-login').style.display = 'none';
+}
+
+async function doPasswordReset(){
+  const email = document.getElementById('cp-email').value.trim();
+  if(!email){ alert('Enter your email address first, then click Forgot password.'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://classplan.barestkd.fit'
+  });
+  if(error){ alert('Error sending reset email. Please try again.'); return; }
+  alert('Password reset email sent! Check your inbox.');
 }
 
 async function doCpLogin(){
