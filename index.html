@@ -4499,7 +4499,7 @@ async function doAuthSignup(){
   if(!name||!email||!pw){err.textContent='All fields required.';err.style.display='block';return;}
   if(pw.length<6){err.textContent='Password min 6 chars.';err.style.display='block';return;}
   if(pw!==confirm){err.textContent='Passwords do not match.';err.style.display='block';return;}
-  const {data:allowed}=await sb.from('allowed_emails').select('email').eq('email',email).single();
+  const {data:allowed}=await sb.rpc('is_email_allowed', { check_email: email });
   if(!allowed){err.textContent='Email not on file with BaresTKD.';err.style.display='block';return;}
   const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name}}});
   if(error){err.textContent=error.message;err.style.display='block';return;}
