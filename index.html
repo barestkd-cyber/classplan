@@ -4393,6 +4393,8 @@ async function initAuth(){
     currentUser = data.session.user;
     await loadUserProfile();
     showCpApp();
+    await loadCycleFromSupabase();
+    renderCycleManager();
   } else {
     document.getElementById('cp-loading').style.display = 'none';
     document.getElementById('cp-login').style.display = 'flex';
@@ -4414,6 +4416,8 @@ async function submitNewPassword(){
   currentUser = data.session.user;
   await loadUserProfile();
   showCpApp();
+  await loadCycleFromSupabase();
+  renderCycleManager();
 }
 
 function showCpApp(){
