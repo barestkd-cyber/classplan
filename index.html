@@ -4144,7 +4144,8 @@ async function loadCycleFromSupabase() {
   }
 
   // Load future cycles
-  const future = data.filter(c => !c.is_active).sort((a,b) => new Date(a.start_date) - new Date(b.start_date));
+  const today = new Date(); today.setHours(0,0,0,0);
+  const future = data.filter(c => !c.is_active && (!c.start_date || new Date(c.start_date + 'T00:00:00') >= today)).sort((a,b) => new Date(a.start_date) - new Date(b.start_date));
   if(future.length) {
     futureCycles = future.map(c => ({
       supabase_id: c.id,
