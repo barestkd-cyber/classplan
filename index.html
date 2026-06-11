@@ -4030,7 +4030,7 @@ function renderTestingDatesFor(cardId, cycle) {
     row.innerHTML = `
       <input type="text" value="${td.label}" placeholder="e.g. Cubs Testing" onchange="getCycleById('${cardId}').testingDates[${i}].label=this.value" style="background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:6px 8px;border-radius:3px;outline:none;width:100%;">
       <input type="date" value="${td.date}" onchange="getCycleById('${cardId}').testingDates[${i}].date=this.value" style="background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:6px 8px;border-radius:3px;outline:none;width:100%;">
-      <button onclick="removeTestingDateFrom('${cardId}',${i})" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 8px;border-radius:3px;cursor:pointer;font-size:11px;">✕</button>
+      <button onclick="removeTestingDateFrom('${cardId}',${i},this)" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 8px;border-radius:3px;cursor:pointer;font-size:11px;">✕</button>
     `;
     list.appendChild(row);
   });
