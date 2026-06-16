@@ -1262,6 +1262,7 @@ function openCellModal(entry) {
         const key = slotKey(entry.weekOffset !== undefined ? entry.weekOffset : currentWeekOffset, entry.day, entry.time);
         if (planData[key]) planData[key].status = 'reviewed';
         entry.status = 'reviewed';
+        saveSlot(key);
         buildGrid();
         closeModal();
         showToast('Plan approved');
@@ -1280,6 +1281,7 @@ function openCellModal(entry) {
           planData[key].planId = null;
           if (note) planData[key].sendBackNote = note;
         }
+        saveSlot(key);
         buildGrid();
         closeModal();
         showToast('Plan sent back');
@@ -1888,6 +1890,7 @@ function saveDraft() {
     planData[key].status = isAdmin ? 'reviewed' : 'draft';
     planData[key].planId = key;
     planData[key].planContent = collectPlanData();
+    saveSlot(key);
     showToast('Draft saved');
   }
 }
@@ -1904,6 +1907,7 @@ function submitPlan() {
     planData[key].planContent = content;
     if (wasApproved && !isAdmin) planData[key].resubmittedAt = new Date().toISOString();
     currentEntry = { ...currentEntry, ...planData[key] };
+    saveSlot(key);
     buildGrid();
     // Clear form so unsaved-content check doesn't trigger on back navigation
     document.getElementById('pFocus').value = '';
@@ -2534,6 +2538,7 @@ function showPrintBtn(show) {
 function toggleSharePlan(key) {
   if (!planData[key]) return;
   planData[key].sharedWithStudents = !planData[key].sharedWithStudents;
+  saveSlot(key);
   const isShared = planData[key].sharedWithStudents;
   const btn = document.getElementById('shareToggleBtn');
   if (btn) {
@@ -2653,6 +2658,7 @@ function doReassign(wipePlan) {
 
   planData[key].instructor = newInstr;
   currentEntry.instructor = newInstr;
+  saveSlot(key);
 
   document.getElementById('reassignPopup').remove();
   buildGrid();
@@ -4162,6 +4168,51 @@ async function loadCycleFromSupabase() {
       rotationHalf: c.rotation_half || '1'
     }));
   }
+  await loadAllVisibleWeeks();
+  buildGrid();
+}
+
+// ── Class plan persistence (overlay on the schedule template) ──
+function localYMD(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+function parseSlotKey(key){
+  const m = key.match(/^(-?\d+)-(\d+)-(.+)$/);
+  return m ? { weekOffset: parseInt(m[1],10), day: parseInt(m[2],10), time: m[3] } : null;
+}
+
+async function saveSlot(key){
+  const p = planData[key]; if(!p) return;
+  const parsed = parseSlotKey(key); if(!parsed) return;
+  const tmpl = SCHEDULE_TEMPLATE.find(t => t.day===parsed.day && t.time===parsed.time) || {};
+  const row = {
+    week_start: localYMD(getWeekStart(parsed.weekOffset)),
+    day: parsed.day, time: parsed.time,
+    label: tmpl.label || '', belt: tmpl.belt || '',
+    instructor: p.instructor || '', status: p.status || 'none',
+    plan_id: p.planId || null, plan_content: p.planContent || null,
+    chief_note: p.chiefNote || null, shared_with_students: !!p.sharedWithStudents,
+    send_back_note: p.sendBackNote || null, resubmitted_at: p.resubmittedAt || null,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('class_plans').upsert(row, { onConflict: 'week_start,day,time' });
+  if(error) console.error('saveSlot failed', error);
+}
+
+async function loadAllVisibleWeeks(){
+  const offsets = [0,1,2,3];
+  const dates = offsets.map(o => localYMD(getWeekStart(o)));
+  const dateToOffset = {}; offsets.forEach((o,i)=> dateToOffset[dates[i]]=o);
+  const { data, error } = await sb.from('class_plans').select('*').in('week_start', dates);
+  if(error){ console.error('loadAllVisibleWeeks failed', error); return; }
+  (data||[]).forEach(r => {
+    const off = dateToOffset[r.week_start]; if(off===undefined) return;
+    planData[slotKey(off, r.day, r.time)] = {
+      status: r.status || 'none', instructor: r.instructor || '',
+      planId: r.plan_id || null, planContent: r.plan_content || null,
+      chiefNote: r.chief_note || '', sharedWithStudents: !!r.shared_with_students,
+      sendBackNote: r.send_back_note || '', resubmittedAt: r.resubmitted_at || null
+    };
+  });
 }
 
 function addFutureCycle() {
