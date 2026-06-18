@@ -139,6 +139,7 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .assign-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
 .assign-select{width:100%;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:8px 11px;border-radius:3px;outline:none;appearance:none;-webkit-appearance:none;margin-bottom:8px;}
 .assign-btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:var(--gold);color:var(--black);border:none;padding:9px 18px;border-radius:3px;cursor:pointer;}
+.meta-mini-btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--faint);color:var(--muted);padding:2px 8px;border-radius:2px;cursor:pointer;}
 
 /* read-only plan view inside modal */
 .plan-readonly{}
@@ -180,10 +181,11 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
   #modalOverlay .modal-title{font-size:30px;}
   #modalOverlay .modal-meta{justify-content:center;}
   #modalOverlay #modalMeta div{justify-content:center;}
-  #modalOverlay .modal-meta-item{font-size:16px;}
+  #modalOverlay .modal-meta-item{font-size:20px;}
   #modalOverlay .modal-body{font-size:17px;text-align:center;}
   #modalOverlay .modal-actions{justify-content:center;}
-  #modalOverlay .btn,#modalOverlay .assign-btn{font-size:19px;padding:18px 36px;border-radius:5px;}
+  #modalOverlay .btn,#modalOverlay .assign-btn{font-size:19px;padding:18px 24px;border-radius:5px;width:auto !important;}
+  #modalOverlay .meta-mini-btn{font-size:16px;padding:7px 18px;}
 }
 .btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 18px;border-radius:3px;border:none;cursor:pointer;transition:all .15s;}
 .btn-ghost{background:none;border:1px solid var(--bl);color:var(--muted);}
@@ -1213,12 +1215,12 @@ function openCellModal(entry) {
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#27ae60;">${entry.instructor || 'Unassigned'}</span>
-        ${isAdmin ? '<button onclick="openReassignPanel()" style="font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--faint);color:var(--muted);padding:2px 8px;border-radius:2px;cursor:pointer;">' + (entry.instructor ? 'Reassign' : 'Assign') + '</button>' : ''}
+        ${isAdmin ? '<button class="meta-mini-btn" onclick="openReassignPanel()">' + (entry.instructor ? 'Reassign' : 'Assign') + '</button>' : ''}
       </div>
       ${leaders.length > 0 || isAdmin ? `
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           ${leaders.length > 0 ? leaderHtml : '<span style="font-size:11px;color:var(--faint);font-style:italic;">No leaders signed up</span>'}
-          ${isAdmin ? '<button onclick="openLeaderEdit()" style="font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--faint);color:var(--muted);padding:2px 8px;border-radius:2px;cursor:pointer;">Edit Leaders</button>' : ''}
+          ${isAdmin ? '<button class="meta-mini-btn" onclick="openLeaderEdit()">Edit Leaders</button>' : ''}
         </div>` : ''}
     </div>
   `;
