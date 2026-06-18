@@ -175,6 +175,15 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
   .modal-overlay{align-items:center;}
   .modal-sheet{border-radius:8px;max-height:88vh;}
   .modal-handle{display:none;}
+  /* Bigger, centered cell modal on PC */
+  #modalOverlay .modal-sheet{max-width:760px;padding-bottom:40px;}
+  #modalOverlay .modal-title{font-size:30px;}
+  #modalOverlay .modal-meta{justify-content:center;}
+  #modalOverlay #modalMeta div{justify-content:center;}
+  #modalOverlay .modal-meta-item{font-size:16px;}
+  #modalOverlay .modal-body{font-size:17px;text-align:center;}
+  #modalOverlay .modal-actions{justify-content:center;}
+  #modalOverlay .btn,#modalOverlay .assign-btn{font-size:19px;padding:18px 36px;border-radius:5px;}
 }
 .btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 18px;border-radius:3px;border:none;cursor:pointer;transition:all .15s;}
 .btn-ghost{background:none;border:1px solid var(--bl);color:var(--muted);}
