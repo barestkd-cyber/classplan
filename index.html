@@ -29,6 +29,7 @@
   --bg-none:#1e1e22; --bg-draft:#232329; --bg-sub:#2a2410; --bg-rev:#13291b; --bg-resub:#241030;
   --bd-none:#3a3a42; --bd-draft:#3a3a42; --bd-sub:#d9b85a; --bd-rev:#2ed573; --bd-resub:#a060c0;
   --grid-line:#3a3a42; --grid-muted:#9a9aa2; --grid-bg:#0d0d0d;
+  --bg-unassigned:#1a1a1e; --bd-unassigned:#33333a;
   --prog-red:#ff5a5a; --prog-cubs:#ff9f43; --prog-ampd:#2ed573; --prog-kick:#4aa3ff; --prog-leader:#efce6b;
 }
 
@@ -49,6 +50,7 @@ body.light {
   --bg-none:#f4f8fa; --bg-draft:#eef2f6; --bg-sub:#fbf3da; --bg-rev:#e6f6ec; --bg-resub:#f3e8fb;
   --bd-none:#c4d0da; --bd-draft:#c4d0da; --bd-sub:#c9a53a; --bd-rev:#27ae60; --bd-resub:#8e44ad;
   --grid-line:#000000; --grid-muted:#7a828d; --grid-bg:#ffffff;
+  --bg-unassigned:#eef2f6; --bd-unassigned:#c4d0da;
   --prog-red:#d62828; --prog-cubs:#e0701a; --prog-ampd:#1e9e54; --prog-kick:#2d7fd6; --prog-leader:#d4a216;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -95,13 +97,13 @@ header{background:var(--dark);border-bottom:2px solid var(--red);padding:0 14px;
 .status-submitted{background:var(--bg-sub);border-left-color:var(--bd-sub);}
 .status-resubmitted{background:var(--bg-resub);border-left-color:var(--bd-resub);}
 .status-reviewed{background:var(--bg-rev);border-left-color:var(--bd-rev);}
-.status-unassigned{background:#131313;border-left-color:#222;opacity:.6;}
+.status-unassigned{background:var(--bg-unassigned);border-left-color:var(--bd-unassigned);}
 
 .cell-time{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--grid-muted);margin-bottom:2px;}
 .cell-program{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:17px;letter-spacing:.02em;line-height:1.1;}
 .cell-belt{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-top:1px;}
 .cell-instructor{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--grid-muted);margin-top:2px;}
-.cell-unassigned-lbl{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:2px;}
+.cell-unassigned-lbl{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grid-muted);margin-top:2px;}
 
 /* prog colors */
 .prog-juniors,.prog-teen,.prog-all,.prog-forms,.prog-sparring{color:var(--prog-red);}
