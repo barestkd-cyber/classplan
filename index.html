@@ -1032,10 +1032,10 @@ function buildGrid() {
 
   // ── TIME COLUMN ──
   const timeCol = document.createElement('div');
-  timeCol.style.cssText = 'flex-shrink:0;width:44px;background:var(--dark);border-right:1px solid var(--border);display:flex;flex-direction:column;';
+  timeCol.style.cssText = 'flex-shrink:0;width:44px;background:var(--grid-bg);border-right:1px solid var(--grid-line);display:flex;flex-direction:column;';
 
   const dayHdrSpacer = document.createElement('div');
-  dayHdrSpacer.style.cssText = 'height:36px;border-bottom:1px solid var(--border);flex-shrink:0;';
+  dayHdrSpacer.style.cssText = 'height:36px;border-bottom:1px solid var(--grid-line);flex-shrink:0;';
   timeCol.appendChild(dayHdrSpacer);
 
   if (hasMorning) {
