@@ -21,7 +21,7 @@
   --bl: #2e2e2e;
   --red: #c0392b;
   --red-dim: #7b2118;
-  --gold: #c9a84c;
+  --gold: #e6c463;
   --text: #e8e8e8;
   --muted: #666;
   --faint: #303030;
@@ -45,7 +45,7 @@ body.light {
   --faint:   #aaaaaa;
   --red:     #b03020;
   --red-dim: #f5d5d0;
-  --gold:    #9a7020;
+  --gold:    #c0900a;
 
   --bg-none:#f4f8fa; --bg-draft:#eef2f6; --bg-sub:#fbf3da; --bg-rev:#e6f6ec; --bg-resub:#f3e8fb;
   --bd-none:#c4d0da; --bd-draft:#c4d0da; --bd-sub:#c9a53a; --bd-rev:#27ae60; --bd-resub:#8e44ad;
@@ -85,7 +85,7 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .sched-scroll::-webkit-scrollbar-thumb{background:var(--faint);border-radius:2px;}
 
 .sched-grid{display:grid;grid-template-columns:repeat(6,minmax(96px,1fr));min-width:576px;border-top:1px solid var(--grid-line);border-left:1px solid var(--grid-line);}
-.sg-day-hdr{background:var(--bg-none);border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);padding:6px 6px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
+.sg-day-hdr{background:var(--grid-bg);border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);padding:6px 6px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
 .sg-day-hdr.today{}
 .sg-day-col{border-right:1px solid var(--grid-line);display:flex;flex-direction:column;}
 .day-filler{flex:1;background:var(--grid-bg);min-height:20px;}
@@ -468,7 +468,7 @@ body.light .hdr-tab.active { background: var(--red); }
 <div style="height:2px;background:var(--red);"></div>
 
 <!-- WEEK DATE TABS — only on Schedule -->
-<div id="weekTabRow" style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg-none);border-bottom:1px solid var(--border);padding:0 14px;"></div>
+<div id="weekTabRow" style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--grid-bg);border-bottom:1px solid var(--border);padding:0 14px;"></div>
 
 <div id="pillNav" style="display:none;"><button id="tab-schedule-hidden"></button></div>
 
@@ -939,10 +939,10 @@ function buildWeekPills() {
     const isActive = i === currentWeekOffset && !showingArchives;
 
     const tab = document.createElement('div');
-    tab.style.cssText = `flex-shrink:0;padding:10px 16px 8px;cursor:pointer;border-bottom:3px solid ${isActive?'var(--gold)':'transparent'};margin-bottom:-1px;`;
+    tab.style.cssText = `flex-shrink:0;padding:10px 16px 8px;cursor:pointer;border-bottom:5px solid ${isActive?'var(--gold)':'transparent'};margin-bottom:-1px;`;
     tab.innerHTML = `
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;color:${isActive?'var(--gold)':'var(--muted)'};">${label}</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;color:${isActive?'var(--gold)':'var(--faint)'};margin-top:1px;">${sublabels[i]}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;color:${isActive?'var(--gold)':'var(--text)'};">${label}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;color:${isActive?'var(--gold)':'var(--muted)'};margin-top:1px;">${sublabels[i]}</div>
     `;
     tab.onclick = () => { showingArchives = false; currentWeekOffset = i; buildWeekPills(); buildGrid(); document.getElementById('subpanel-schedule').style.display='block'; document.getElementById('subpanel-archives').style.display='none'; };
     nav.appendChild(tab);
@@ -951,7 +951,7 @@ function buildWeekPills() {
   // Archives tab — fifth spot
   const archTab = document.createElement('div');
   const archActive = showingArchives;
-  archTab.style.cssText = `flex-shrink:0;padding:10px 16px 8px;cursor:pointer;border-bottom:3px solid ${archActive?'var(--red)':'transparent'};margin-bottom:-1px;`;
+  archTab.style.cssText = `flex-shrink:0;padding:10px 16px 8px;cursor:pointer;border-bottom:5px solid ${archActive?'var(--red)':'transparent'};margin-bottom:-1px;`;
   archTab.innerHTML = `
     <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;color:${archActive?'var(--text)':'var(--muted)'};">Archives</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;color:${archActive?'var(--muted)':'var(--faint)'};margin-top:1px;">Past weeks</div>
@@ -1046,7 +1046,7 @@ function buildGrid() {
   }
 
   const timeBody = document.createElement('div');
-  timeBody.style.cssText = 'position:relative;height:' + totalH + 'px;flex-shrink:0;';
+  timeBody.style.cssText = 'position:relative;height:' + totalH + 'px;margin-top:2px;flex-shrink:0;';
   TIME_LABELS.forEach(t => {
     const offsetMins = (t.h * 60 + t.m) - GRID_START;
     if (offsetMins < 0 || offsetMins > GRID_SPAN) return;
@@ -1114,7 +1114,7 @@ function buildGrid() {
 
     // Evening body
     const body = document.createElement('div');
-    body.style.cssText = 'position:relative;height:' + totalH + 'px;background:var(--black);flex-shrink:0;';
+    body.style.cssText = 'position:relative;height:' + totalH + 'px;background:var(--black);margin-top:2px;flex-shrink:0;';
 
     // Evening class cells (and Sat all cells)
     const dayClasses = SCHEDULE_TEMPLATE.filter(t => {
