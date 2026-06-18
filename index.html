@@ -4446,6 +4446,29 @@ function saveScheduleEdits() {
   buildGrid();
   closeAdminPanel();
   showToast('Schedule saved');
+  publishScheduleTemplate();
+}
+
+// Publish the current SCHEDULE_TEMPLATE (incl. any admin edits applied to it)
+// to the shared schedule_template table so other apps (e.g. curriculum) can
+// read the live schedule. Upsert on the (day, time) unique key so
+// re-publishing overwrites cleanly. Does not affect how classplan builds its
+// own grid — that still runs off SCHEDULE_TEMPLATE in memory.
+async function publishScheduleTemplate() {
+  const rows = SCHEDULE_TEMPLATE.map(t => ({
+    day: t.day,
+    time: t.time,
+    time_h: t.timeH,
+    time_m: t.timeM,
+    label: t.label || '',
+    belt: t.belt || '',
+    prog_css: t.progCss || '',
+    default_instructor: t.defaultInstructor || '',
+    duration: t.duration || 45
+  }));
+  const { error } = await BTKD.sb.from('schedule_template').upsert(rows, { onConflict: 'day,time' });
+  if (error) { showToast('Saved locally — publish failed: ' + error.message); return; }
+  showToast('Schedule published');
 }
 
 // Update popstate to handle admin panel
