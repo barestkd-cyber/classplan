@@ -128,8 +128,8 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .modal-handle{width:36px;height:4px;background:var(--faint);border-radius:2px;margin:10px auto 0;}
 .modal-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:20px;letter-spacing:.03em;text-transform:uppercase;}
-.mt-day{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:24px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);}
-.mt-time{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+.mt-day{font-size:.8em;font-weight:700;letter-spacing:.04em;color:var(--text);margin-left:22px;}
+.mt-time{font-size:.72em;font-weight:600;letter-spacing:.04em;color:var(--muted);margin-left:16px;white-space:nowrap;}
 .modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;}
 .modal-close:hover{color:var(--text);}
 .modal-meta{display:flex;gap:12px;padding:8px 16px;flex-wrap:wrap;}
@@ -1203,7 +1203,7 @@ function openCellModal(entry) {
   const endM = (entry.timeM + dur) % 60;
   const fmtTime = (h, m) => { const ap = h>=12?'PM':'AM'; const dh = h%12||12; return `${dh}:${String(m).padStart(2,'0')} ${ap}`; };
   const timeRange = `${fmtTime(entry.timeH, entry.timeM)}–${fmtTime(endH, endM)} (${dur} min)`;
-  title.innerHTML = entry.label + (entry.belt ? ' — ' + entry.belt : '');
+  title.innerHTML = (entry.label + (entry.belt ? ' — ' + entry.belt : '')) + '<span class="mt-day">' + dayNames[entry.day] + '</span><span class="mt-time">' + timeRange + '</span>';
   const leaders = getLeadersForSlot(entry);
   const leaderHtml = leaders.map(l =>
     `<span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);">${l.name}</span>`
@@ -1211,10 +1211,6 @@ function openCellModal(entry) {
 
   meta.innerHTML = `
     <div style="width:100%;display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;align-items:baseline;justify-content:center;gap:30px;flex-wrap:wrap;width:100%;">
-        <span class="mt-day">${dayNames[entry.day]}</span>
-        <span class="mt-time">${timeRange}</span>
-      </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#27ae60;">${entry.instructor || 'Unassigned'}</span>
         ${isAdmin ? '<button class="meta-mini-btn" onclick="openReassignPanel()">' + (entry.instructor ? 'Reassign' : 'Assign') + '</button>' : ''}
