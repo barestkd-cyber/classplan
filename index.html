@@ -433,6 +433,16 @@ body.light .hdr-tab.active { background: var(--red); }
   </div>
 </div>
 
+<!-- ACCESS DENIED -->
+<div id="cp-denied" style="display:none;position:fixed;inset:0;background:#0d0d0d;z-index:1000;align-items:center;justify-content:center;">
+  <div style="width:90%;max-width:360px;background:#161920;border:1px solid #252830;border-top:3px solid var(--red);border-radius:10px;padding:32px 24px;text-align:center;">
+    <img src="https://raw.githubusercontent.com/barestkd-cyber/curriculum/main/BaresTKDPatch.png" style="width:64px;display:block;margin:0 auto 16px;" onerror="this.style.display='none'">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.6rem;letter-spacing:3px;color:#e8eaf0;margin-bottom:8px;">NO ACCESS</div>
+    <div style="font-size:0.85rem;color:#aaa;line-height:1.5;margin-bottom:20px;">You don't have access to this app. The Class Planner is restricted to instructors and admin.</div>
+    <button onclick="BTKD.signOut().then(function(){location.reload();})" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;letter-spacing:3px;cursor:pointer;color:#111;">Sign Out</button>
+  </div>
+</div>
+
 <header style="height:auto;padding:12px 14px;flex-direction:column;align-items:stretch;border-bottom:none;">
   <div style="display:flex;align-items:center;justify-content:space-between;">
     <div style="line-height:1.1;">
@@ -4479,6 +4489,7 @@ async function initAuth(){
   if(session?.user){
     currentUser = session.user;
     await loadUserProfile();
+    if(!cpIsStaff()){ showCpDenied(); return; }
     showCpApp();
     await loadCycleFromSupabase();
     renderCycleManager();
@@ -4501,6 +4512,7 @@ async function submitNewPassword(){
   document.getElementById('new-password-modal').style.display = 'none';
   currentUser = user;
   await loadUserProfile();
+  if(!cpIsStaff()){ showCpDenied(); return; }
   showCpApp();
   await loadCycleFromSupabase();
   renderCycleManager();
@@ -4509,6 +4521,14 @@ async function submitNewPassword(){
 function showCpApp(){
   document.getElementById('cp-loading').style.display = 'none';
   document.getElementById('cp-login').style.display = 'none';
+}
+
+// Staff-only gate: the planner is for instructors/admin, not students.
+function cpIsStaff(){ return currentRole === 'admin' || currentRole === 'instructor'; }
+function showCpDenied(){
+  document.getElementById('cp-loading').style.display = 'none';
+  document.getElementById('cp-login').style.display = 'none';
+  document.getElementById('cp-denied').style.display = 'flex';
 }
 
 function doPasswordReset(){
@@ -4539,6 +4559,7 @@ async function doCpLogin(){
   if(error){ err.style.display='block'; return; }
   currentUser = user;
   await loadUserProfile();
+  if(!cpIsStaff()){ showCpDenied(); return; }
   showCpApp();
   await loadCycleFromSupabase();
   renderCycleManager();
@@ -4578,6 +4599,7 @@ async function doAuthSignin(){
   const { user, error } = await BTKD.signIn({ email, password: pw });
   if(error){err.textContent=error;err.style.display='block';return;}
   currentUser=user; closeAuthModal(); await loadUserProfile();
+  if(!cpIsStaff()){ showCpDenied(); return; }
 }
 
 async function doAuthSignup(){
@@ -4590,6 +4612,7 @@ async function doAuthSignup(){
   const { user, error } = await BTKD.signUp({ name, email, password: pw, confirm });
   if(error){err.textContent=error;err.style.display='block';return;}
   currentUser=user; closeAuthModal(); await loadUserProfile();
+  if(!cpIsStaff()){ showCpDenied(); return; }
 }
 
 initAuth();
