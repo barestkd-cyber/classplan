@@ -70,7 +70,7 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .screen.active{display:block;}
 
 /* ══ DASHBOARD ══ */
-.dash-outer{padding:12px 0 60px;}
+.dash-outer{padding:0 0 60px;}
 .week-nav{display:flex;align-items:center;gap:10px;padding:0 14px 10px;}
 .week-arrow{background:none;border:1px solid var(--bl);color:var(--muted);width:30px;height:30px;border-radius:3px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
 .week-arrow:hover{border-color:var(--text);color:var(--text);}
@@ -84,13 +84,13 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .sched-scroll::-webkit-scrollbar-track{background:var(--black);}
 .sched-scroll::-webkit-scrollbar-thumb{background:var(--faint);border-radius:2px;}
 
-.sched-grid{display:grid;grid-template-columns:repeat(6,minmax(96px,1fr));min-width:576px;border-top:2px solid var(--grid-line);border-left:2px solid var(--grid-line);}
-.sg-day-hdr{background:var(--grid-bg);border-right:1px solid var(--grid-line);border-bottom:2px solid var(--grid-line);padding:6px 6px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
+.sched-grid{display:grid;grid-template-columns:repeat(6,minmax(96px,1fr));min-width:576px;border-top:1px solid var(--grid-line);border-left:1px solid var(--grid-line);}
+.sg-day-hdr{background:var(--bg-none);border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);padding:6px 6px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
 .sg-day-hdr.today{}
-.sg-day-col{border-right:2px solid var(--grid-line);display:flex;flex-direction:column;}
+.sg-day-col{border-right:1px solid var(--grid-line);display:flex;flex-direction:column;}
 .day-filler{flex:1;background:var(--grid-bg);min-height:20px;}
 
-.class-cell{border:2px solid var(--grid-line);padding:6px 7px;cursor:pointer;transition:filter .12s;position:relative;text-align:center;}
+.class-cell{border:1px solid var(--grid-line);padding:6px 7px;cursor:pointer;transition:filter .12s;position:relative;text-align:center;}
 .class-cell:hover{filter:brightness(1.35);}
 .status-none{background:var(--bg-none);border-left-color:var(--grid-line);}
 .status-draft{background:var(--bg-draft);border-left-color:var(--bd-draft);}
@@ -468,7 +468,7 @@ body.light .hdr-tab.active { background: var(--red); }
 <div style="height:2px;background:var(--red);"></div>
 
 <!-- WEEK DATE TABS — only on Schedule -->
-<div id="weekTabRow" style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--grid-bg);border-bottom:1px solid var(--border);padding:0 14px;"></div>
+<div id="weekTabRow" style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg-none);border-bottom:1px solid var(--border);padding:0 14px;"></div>
 
 <div id="pillNav" style="display:none;"><button id="tab-schedule-hidden"></button></div>
 
