@@ -1079,7 +1079,7 @@ function buildGrid() {
     // Morning strip — non-sat only, compact rows
     if (hasMorning && !isSat) {
       const strip = document.createElement('div');
-      strip.style.cssText = 'height:' + morningStripH + 'px;border-bottom:2px solid var(--red);background:var(--black);position:relative;';
+      strip.style.cssText = 'height:' + morningStripH + 'px;border-bottom:2px solid var(--red);background:var(--bg-none);position:relative;';
       const dayMorning = SCHEDULE_TEMPLATE
         .filter(t => t.day === d && t.timeH * 60 + t.timeM < GRID_START)
         .sort((a,b) => (a.timeH*60+a.timeM)-(b.timeH*60+b.timeM));
@@ -1108,13 +1108,13 @@ function buildGrid() {
       dayWrap.appendChild(strip);
     } else if (hasMorning && isSat) {
       const spacer = document.createElement('div');
-      spacer.style.cssText = 'height:' + morningStripH + 'px;border-bottom:2px solid var(--red);background:var(--black);';
+      spacer.style.cssText = 'height:' + morningStripH + 'px;border-bottom:2px solid var(--red);background:var(--bg-none);';
       dayWrap.appendChild(spacer);
     }
 
     // Evening body
     const body = document.createElement('div');
-    body.style.cssText = 'position:relative;height:' + totalH + 'px;background:var(--black);margin-top:2px;flex-shrink:0;';
+    body.style.cssText = 'position:relative;height:' + totalH + 'px;background:var(--bg-none);margin-top:2px;flex-shrink:0;';
 
     // Evening class cells (and Sat all cells)
     const dayClasses = SCHEDULE_TEMPLATE.filter(t => {
