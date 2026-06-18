@@ -57,7 +57,7 @@ body.light {
 body{background:var(--black);color:var(--text);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden;}
 
 /* HEADER */
-header{background:var(--dark);border-bottom:2px solid var(--red);padding:0 14px;height:50px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;}
+header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14px;height:50px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;}
 .logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;letter-spacing:.08em;flex-shrink:0;padding-right:10px;border-right:1px solid var(--border);margin-right:2px;}
 .logo span{color:var(--red);}
 .hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -85,19 +85,19 @@ header{background:var(--dark);border-bottom:2px solid var(--red);padding:0 14px;
 .sched-scroll::-webkit-scrollbar-thumb{background:var(--faint);border-radius:2px;}
 
 .sched-grid{display:grid;grid-template-columns:repeat(6,minmax(96px,1fr));min-width:576px;border-top:2px solid var(--grid-line);border-left:2px solid var(--grid-line);}
-.sg-day-hdr{background:var(--dark);border-right:1px solid var(--grid-line);border-bottom:2px solid var(--grid-line);padding:6px 6px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
+.sg-day-hdr{background:var(--grid-bg);border-right:1px solid var(--grid-line);border-bottom:2px solid var(--grid-line);padding:6px 6px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
 .sg-day-hdr.today{}
 .sg-day-col{border-right:2px solid var(--grid-line);display:flex;flex-direction:column;}
 .day-filler{flex:1;background:var(--grid-bg);min-height:20px;}
 
-.class-cell{border-bottom:2px solid var(--grid-line);padding:6px 7px;cursor:pointer;transition:filter .12s;border-left:3px solid transparent;position:relative;text-align:center;}
+.class-cell{border:2px solid var(--grid-line);padding:6px 7px;cursor:pointer;transition:filter .12s;position:relative;text-align:center;}
 .class-cell:hover{filter:brightness(1.35);}
-.status-none{background:var(--bg-none);border-left-color:var(--bd-none);}
+.status-none{background:var(--bg-none);border-left-color:var(--grid-line);}
 .status-draft{background:var(--bg-draft);border-left-color:var(--bd-draft);}
 .status-submitted{background:var(--bg-sub);border-left-color:var(--bd-sub);}
 .status-resubmitted{background:var(--bg-resub);border-left-color:var(--bd-resub);}
 .status-reviewed{background:var(--bg-rev);border-left-color:var(--bd-rev);}
-.status-unassigned{background:var(--bg-unassigned);border-left-color:var(--bd-unassigned);}
+.status-unassigned{background:var(--bg-unassigned);border-left-color:var(--grid-line);}
 
 .cell-time{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--grid-muted);margin-bottom:2px;}
 .cell-program{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:17px;letter-spacing:.02em;line-height:1.1;}
@@ -468,7 +468,7 @@ body.light .hdr-tab.active { background: var(--red); }
 <div style="height:2px;background:var(--red);"></div>
 
 <!-- WEEK DATE TABS — only on Schedule -->
-<div id="weekTabRow" style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--dark);border-bottom:1px solid var(--border);padding:0 14px;"></div>
+<div id="weekTabRow" style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--grid-bg);border-bottom:1px solid var(--border);padding:0 14px;"></div>
 
 <div id="pillNav" style="display:none;"><button id="tab-schedule-hidden"></button></div>
 
