@@ -170,6 +170,12 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 
 /* modal actions */
 .modal-actions{display:flex;gap:8px;padding:14px 16px 0;flex-wrap:wrap;}
+/* PC: center the modal; mobile (<=680px) keeps the bottom sheet */
+@media(min-width:681px){
+  .modal-overlay{align-items:center;}
+  .modal-sheet{border-radius:8px;max-height:88vh;}
+  .modal-handle{display:none;}
+}
 .btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 18px;border-radius:3px;border:none;cursor:pointer;transition:all .15s;}
 .btn-ghost{background:none;border:1px solid var(--bl);color:var(--muted);}
 .btn-ghost:hover{border-color:var(--text);color:var(--text);}
