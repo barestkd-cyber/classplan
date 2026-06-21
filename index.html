@@ -391,6 +391,17 @@ body.light .hdr-tab.active { background: var(--red); }
 .toast{position:fixed;bottom:16px;right:14px;background:var(--gold);color:var(--black);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:10px 16px;border-radius:3px;opacity:0;transform:translateY(8px);transition:all .22s;pointer-events:none;z-index:999;}
 .toast.show{opacity:1;transform:translateY(0);}
 #pw-reset-modal.active { display:flex !important; }
+.prog-belt-diagram{display:flex;align-items:stretch;height:38px;border-radius:6px;overflow:hidden;}
+.prog-belt-stripe{width:18px;height:100%;cursor:pointer;flex-shrink:0;position:relative;}
+.prog-stripe-check{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:700;pointer-events:none;}
+.prog-stripe-check.earned{background:#fff;color:#2ecc71;border:1.5px solid #2ecc71;}
+.prog-stripe-check.unearned{background:transparent;border:1.5px solid rgba(255,255,255,0.45);}
+.prog-stripe-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:8px;display:none;}
+.prog-stripe-panel.open{display:block;}
+.prog-log-btn{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;width:100%;font-size:0.82rem;color:var(--text);margin-top:8px;}
+.prog-log-btn.logged{border-color:#2ecc71;color:#2ecc71;}
+.prog-log-circle{width:16px;height:16px;border-radius:50%;border:2px solid #555;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.58rem;}
+.prog-log-circle.earned{background:#2ecc71;border-color:#2ecc71;color:#fff;}
 </style>
 </head>
 <body>
@@ -4920,41 +4931,60 @@ async function progAwarder(){
   return _progAwardedBy;
 }
 
+function progStripesFor(rank){
+  const belt = (window.BELTS||[]).find(b => b.name === rank);
+  const descOf = st => (st.details||[]).map(d => (d.title ? d.title+': ' : '') + (d.items||[]).join(', ')).join('  •  ');
+  const left  = belt && belt.stripes ? (belt.stripes.black||[]).map(st => ({ id: st.id, label: st.label, color: '#1c1c1c', desc: descOf(st) })) : [];
+  const right = belt && belt.stripes ? (belt.stripes.colored||[]).map(st => ({ id: st.id, label: st.label, color: st.color || '#888', desc: descOf(st) })) : [];
+  return { left, right };
+}
+
 async function openProgStudent(id){
   const { data: s } = await sb.from('students').select('*').eq('id', id).single();
   if(!s) return;
-  const belt = (window.BELTS||[]).find(b => b.name === s.rank);
-  const groups = [];
-  if(belt && belt.stripes){
-    if((belt.stripes.black||[]).length)   groups.push({ title:'Black Stripes',   items: belt.stripes.black });
-    if((belt.stripes.colored||[]).length) groups.push({ title:'Colored Stripes', items: belt.stripes.colored });
-  }
+  const { left, right } = progStripesFor(s.rank);
   const { data: rows } = await sb.from('student_stripes').select('stripe_key').eq('student_id', id).eq('belt', s.rank);
   const earned = new Set((rows||[]).map(r => r.stripe_key));
-  _progCtx = { id, rank: s.rank, name: s.name, groups, earned };
+  const belt = (window.BELTS||[]).find(b => b.name === s.rank);
+  _progCtx = { id, rank: s.rank, name: s.name, left, right, earned, beltColor: (belt && belt.color) || '#888' };
   renderProgSheet();
   document.getElementById('prog-overlay').classList.add('open');
 }
 
 function renderProgSheet(){
   const c = _progCtx; if(!c) return;
-  const total = c.groups.reduce((n,g)=>n+g.items.length,0);
+  const all = [...c.left, ...c.right];
   document.getElementById('prog-sheet-title').textContent = c.name;
-  document.getElementById('prog-sheet-sub').textContent = c.rank + ' · ' + c.earned.size + '/' + total + ' stripes';
-  const body = document.getElementById('prog-sheet-body');
-  if(!c.groups.length){ body.innerHTML = '<div style="padding:16px;color:var(--muted);">No stripes defined for this belt.</div>'; return; }
-  body.innerHTML = c.groups.map(g =>
-    '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;">'+g.title+'</div>'
-    + g.items.map(st => {
-        const on = c.earned.has(st.id);
-        const dot = st.color || (g.title==='Black Stripes' ? '#111' : '#888');
-        return '<button onclick="toggleProgStripe(\''+st.id+'\')" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:'+(on?'var(--surface)':'transparent')+';border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:7px;cursor:pointer;">'
-          + '<span style="width:14px;height:14px;border-radius:50%;flex-shrink:0;border:2px solid '+dot+';background:'+(on?dot:'transparent')+';"></span>'
-          + '<span style="flex:1;color:var(--text);font-size:.85rem;">'+st.label+'</span>'
-          + '<span style="font-size:.7rem;color:'+(on?'#2ecc71':'var(--muted)')+';font-weight:700;text-transform:uppercase;letter-spacing:1px;">'+(on?'Earned':'Tap to log')+'</span>'
-          + '</button>';
-      }).join('')
-  ).join('');
+  document.getElementById('prog-sheet-sub').textContent = c.rank + ' · ' + c.earned.size + '/' + all.length + ' stripes';
+  const isSr = c.rank && (c.rank.indexOf('Senior') === 0 || c.rank.indexOf('Sr.') === 0);
+  const beltBg = isSr ? 'linear-gradient(to bottom,'+c.beltColor+' 30%,#111 30%,#111 70%,'+c.beltColor+' 70%)' : c.beltColor;
+  const slot = st => { const on = c.earned.has(st.id);
+    return '<div class="prog-belt-stripe" style="background:'+st.color+'" onclick="toggleProgStripePanel(\''+st.id+'\')" title="'+st.label.replace(/"/g,'')+'"><div class="prog-stripe-check '+(on?'earned':'unearned')+'">'+(on?'✓':'')+'</div></div>'; };
+  const cluster = arr => arr.map((st,i)=>(i>0?'<div style="width:3px;flex-shrink:0;background:'+beltBg+';height:100%"></div>':'')+slot(st)).join('');
+  const leftW = c.left.length*18 + Math.max(0,c.left.length-1)*3 + 8;
+  const rightW = c.right.length*18 + Math.max(0,c.right.length-1)*3 + 8;
+  const diag = (c.left.length||c.right.length)
+    ? '<div class="prog-belt-diagram" style="border:1px solid rgba(255,255,255,0.08);">'
+      + '<div style="width:'+leftW+'px;padding:0 4px;display:flex;align-items:stretch;flex-shrink:0;background:'+beltBg+'">'+cluster(c.left)+'</div>'
+      + '<div style="flex:1;background:'+beltBg+'"></div>'
+      + '<div style="width:'+rightW+'px;padding:0 4px;display:flex;align-items:stretch;flex-shrink:0;background:'+beltBg+'">'+cluster(c.right)+'</div>'
+      + '</div>'
+    : '<div style="color:var(--muted);font-size:.8rem;padding:8px 0;">No stripes for this belt.</div>';
+  const panels = all.map(st => { const on = c.earned.has(st.id);
+    return '<div class="prog-stripe-panel" id="progpanel-'+st.id+'">'
+      + '<div style="font-size:.82rem;font-weight:700;margin-bottom:5px;color:'+(st.color==='#1c1c1c'?'var(--text)':st.color)+'">'+st.label+'</div>'
+      + (st.desc ? '<div style="font-size:.74rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">'+st.desc+'</div>' : '')
+      + '<button class="prog-log-btn '+(on?'logged':'')+'" onclick="toggleProgStripe(\''+st.id+'\')"><div class="prog-log-circle '+(on?'earned':'')+'">'+(on?'✓':'')+'</div><span>'+(on?'Earned — tap to remove':'Log this stripe')+'</span></button>'
+      + '</div>'; }).join('');
+  document.getElementById('prog-sheet-body').innerHTML =
+    '<div style="padding:6px 4px 12px;"><div style="font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Stripes — tap a stripe to view or log</div>'+diag+'<div style="margin-top:10px;">'+panels+'</div></div>';
+}
+
+function toggleProgStripePanel(id){
+  const p = document.getElementById('progpanel-'+id); if(!p) return;
+  const wasOpen = p.classList.contains('open');
+  document.querySelectorAll('.prog-stripe-panel').forEach(x => x.classList.remove('open'));
+  if(!wasOpen) p.classList.add('open');
 }
 
 async function toggleProgStripe(key){
@@ -4971,6 +5001,7 @@ async function toggleProgStripe(key){
   }
   _progDirty = true;
   renderProgSheet();
+  const p = document.getElementById('progpanel-'+key); if(p) p.classList.add('open');
 }
 
 function closeProgSheet(){
