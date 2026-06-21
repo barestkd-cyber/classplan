@@ -4909,7 +4909,74 @@ async function renderProgress(){
   }).join('');
 }
 
-function openProgStudent(id){ console.log('progress student (stage 2):', id); }
+let _progCtx = null, _progDirty = false, _progAwardedBy = null;
+
+async function progAwarder(){
+  if(_progAwardedBy) return _progAwardedBy;
+  try {
+    const { data } = await sb.from('profiles').select('name').eq('id', currentUser.id).single();
+    _progAwardedBy = (data && data.name) || (currentUser && currentUser.email) || 'staff';
+  } catch(e){ _progAwardedBy = (currentUser && currentUser.email) || 'staff'; }
+  return _progAwardedBy;
+}
+
+async function openProgStudent(id){
+  const { data: s } = await sb.from('students').select('*').eq('id', id).single();
+  if(!s) return;
+  const belt = (window.BELTS||[]).find(b => b.name === s.rank);
+  const groups = [];
+  if(belt && belt.stripes){
+    if((belt.stripes.black||[]).length)   groups.push({ title:'Black Stripes',   items: belt.stripes.black });
+    if((belt.stripes.colored||[]).length) groups.push({ title:'Colored Stripes', items: belt.stripes.colored });
+  }
+  const { data: rows } = await sb.from('student_stripes').select('stripe_key').eq('student_id', id).eq('belt', s.rank);
+  const earned = new Set((rows||[]).map(r => r.stripe_key));
+  _progCtx = { id, rank: s.rank, name: s.name, groups, earned };
+  renderProgSheet();
+  document.getElementById('prog-overlay').classList.add('open');
+}
+
+function renderProgSheet(){
+  const c = _progCtx; if(!c) return;
+  const total = c.groups.reduce((n,g)=>n+g.items.length,0);
+  document.getElementById('prog-sheet-title').textContent = c.name;
+  document.getElementById('prog-sheet-sub').textContent = c.rank + ' · ' + c.earned.size + '/' + total + ' stripes';
+  const body = document.getElementById('prog-sheet-body');
+  if(!c.groups.length){ body.innerHTML = '<div style="padding:16px;color:var(--muted);">No stripes defined for this belt.</div>'; return; }
+  body.innerHTML = c.groups.map(g =>
+    '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;">'+g.title+'</div>'
+    + g.items.map(st => {
+        const on = c.earned.has(st.id);
+        const dot = st.color || (g.title==='Black Stripes' ? '#111' : '#888');
+        return '<button onclick="toggleProgStripe(\''+st.id+'\')" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:'+(on?'var(--surface)':'transparent')+';border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:7px;cursor:pointer;">'
+          + '<span style="width:14px;height:14px;border-radius:50%;flex-shrink:0;border:2px solid '+dot+';background:'+(on?dot:'transparent')+';"></span>'
+          + '<span style="flex:1;color:var(--text);font-size:.85rem;">'+st.label+'</span>'
+          + '<span style="font-size:.7rem;color:'+(on?'#2ecc71':'var(--muted)')+';font-weight:700;text-transform:uppercase;letter-spacing:1px;">'+(on?'Earned':'Tap to log')+'</span>'
+          + '</button>';
+      }).join('')
+  ).join('');
+}
+
+async function toggleProgStripe(key){
+  const c = _progCtx; if(!c) return;
+  if(c.earned.has(key)){
+    const { error } = await sb.from('student_stripes').delete().eq('student_id', c.id).eq('belt', c.rank).eq('stripe_key', key);
+    if(error){ console.error('unlog error', error); return; }
+    c.earned.delete(key);
+  } else {
+    const awardedBy = await progAwarder();
+    const { error } = await sb.from('student_stripes').insert({ id: crypto.randomUUID(), student_id: c.id, belt: c.rank, stripe_key: key, earned_at: new Date().toISOString(), awarded_by: awardedBy, source: 'staff' });
+    if(error){ console.error('log error', error); return; }
+    c.earned.add(key);
+  }
+  _progDirty = true;
+  renderProgSheet();
+}
+
+function closeProgSheet(){
+  document.getElementById('prog-overlay').classList.remove('open');
+  if(_progDirty){ _progDirty = false; renderProgress(); }
+}
 
 async function renderCompass(){
   const compassEl = document.getElementById('compass-summary');
@@ -5040,6 +5107,20 @@ async function renderCompass(){
       <div style="text-align:center;font-size:0.78rem;color:#888;">Have an account? <span onclick="showAuthSignin()" style="color:var(--gold);cursor:pointer;font-weight:600;">Sign in</span></div>
     </div>
     <button onclick="closeAuthModal()" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.1rem;cursor:pointer;color:#666;">✕</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="prog-overlay" onclick="if(event.target===this) closeProgSheet()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="prog-sheet-title"></div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:2px;" id="prog-sheet-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeProgSheet()">✕</button>
+    </div>
+    <div class="modal-body" id="prog-sheet-body" style="padding-bottom:24px;"></div>
   </div>
 </div>
 </body>
