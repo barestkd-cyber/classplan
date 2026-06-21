@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/barestkd-cyber/curriculum/main/file_0000000084c071f59428edbdcb3828e7.png">
 <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;BaresTKD Class Planner&quot;,&quot;short_name&quot;:&quot;Class Plan&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%23111&quot;,&quot;theme_color&quot;:&quot;%23c8102e&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://raw.githubusercontent.com/barestkd-cyber/curriculum/main/file_0000000084c071f59428edbdcb3828e7.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://portal.barestkd.fit/shared/belts.js?v=1"></script>
 <script src="https://portal.barestkd.fit/shared/auth.js?v=1"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -481,6 +482,7 @@ body.light .hdr-tab.active { background: var(--red); }
     <span id="boardDot" style="display:none;position:absolute;top:4px;right:2px;width:6px;height:6px;background:#e74c3c;border-radius:50%;"></span>
   </button>
   <button class="hdr-tab" id="tab-compass" onclick="showMainScreen('compass')">Compass</button>
+  <button class="hdr-tab" id="tab-progress" onclick="showMainScreen('progress')">Progress</button>
 </div>
 
 <!-- RED LINE UNDER PILLS -->
@@ -856,6 +858,16 @@ body.light .hdr-tab.active { background: var(--red); }
     </div>
     <div id="compass-blackbelts"></div>
 
+  </div>
+</div>
+<div class="screen" id="screen-progress">
+  <div style="padding:16px;max-width:600px;margin:0 auto;">
+    <div style="margin-bottom:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.6rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);">Progress</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">Log and track stripes earned</div>
+    </div>
+    <input type="text" id="prog-search" placeholder="Search students" oninput="renderProgress()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:0.85rem;margin-bottom:14px;outline:none;">
+    <div id="progress-list"></div>
   </div>
 </div>
 
@@ -2456,11 +2468,11 @@ function renderCycle() {
 let lastBoardVisit = new Date(Date.now() - 1000*60*60*1.5); // sim: last visited 1.5h ago
 
 function showMainScreen(name) {
-  ['dashboard','board','cycle','library','compass'].forEach(s => {
+  ['dashboard','board','cycle','library','compass','progress'].forEach(s => {
     const el = document.getElementById('screen-'+s);
     if (el) el.classList.remove('active');
   });
-  ['schedule','cycle','myclasses','board','library','compass'].forEach(t => {
+  ['schedule','cycle','myclasses','board','library','compass','progress'].forEach(t => {
     const btn = document.getElementById('tab-'+t);
     if (btn) btn.classList.remove('active');
   });
@@ -2470,6 +2482,14 @@ function showMainScreen(name) {
     document.getElementById('tab-compass').classList.add('active');
     document.getElementById('weekTabRow').style.display = 'none';
     renderCompass();
+    return;
+  }
+
+  if (name === 'progress') {
+    document.getElementById('screen-progress').classList.add('active');
+    document.getElementById('tab-progress').classList.add('active');
+    document.getElementById('weekTabRow').style.display = 'none';
+    renderProgress();
     return;
   }
 
@@ -4850,6 +4870,46 @@ function isCompassEligible(rank, name){
 function getCompassData(){
   return window._compassData || {};
 }
+
+async function renderProgress(){
+  const listEl = document.getElementById('progress-list');
+  if(!listEl) return;
+  if(typeof window.BELTS === 'undefined'){ listEl.innerHTML = '<div style="color:var(--muted);padding:16px;">Belt catalog not loaded.</div>'; return; }
+  listEl.innerHTML = '<div style="color:var(--muted);padding:16px;">Loading…</div>';
+
+  const { data: students, error: sErr } = await sb.from('students').select('*').order('name');
+  if(sErr){ console.error('progress roster error', sErr); listEl.innerHTML = '<div style="color:var(--muted);padding:16px;">Could not load roster.</div>'; return; }
+  const tkd = (students||[]).filter(s => (s.program||'') === 'TKD');
+
+  const { data: stripes, error: stErr } = await sb.from('student_stripes').select('student_id,belt');
+  if(stErr) console.error('progress stripes error', stErr);
+  const earnedMap = {};
+  (stripes||[]).forEach(r => { const k = r.student_id + '|' + (r.belt||''); earnedMap[k] = (earnedMap[k]||0) + 1; });
+
+  const beltByName = {};
+  window.BELTS.forEach(b => { beltByName[b.name] = b; });
+  const totalFor = name => { const b = beltByName[name]; if(!b || !b.stripes) return 0; return (b.stripes.black||[]).length + (b.stripes.red||[]).length; };
+
+  const f = ((document.getElementById('prog-search')||{}).value || '').toLowerCase();
+  let rows = tkd;
+  if(f) rows = rows.filter(s => (s.name||'').toLowerCase().includes(f) || (s.rank||'').toLowerCase().includes(f));
+  if(!rows.length){ listEl.innerHTML = '<div style="color:var(--muted);padding:16px;">No TKD students found.</div>'; return; }
+
+  listEl.innerHTML = rows.map(s => {
+    const belt = beltByName[s.rank];
+    const color = (belt && belt.color) || '#888';
+    const total = totalFor(s.rank);
+    const earned = earnedMap[s.id + '|' + (s.rank||'')] || 0;
+    const init = (s.name||'').split(' ').slice(0,2).map(x => x[0]||'').join('');
+    return '<button onclick="openProgStudent(\''+s.id+'\')" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;">'
+      + '<div style="width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;background:'+color+'22;border:2px solid '+color+'55;color:'+color+';">'+init+'</div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-weight:700;color:var(--text);">'+(s.name||'—')+'</div><div style="font-size:0.75rem;color:var(--muted);">'+(s.rank||'—')+'</div></div>'
+      + '<div style="text-align:right;flex-shrink:0;"><div style="font-weight:800;color:var(--text);">'+earned+'/'+total+'</div><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">stripes</div></div>'
+      + '</button>';
+  }).join('');
+}
+
+function openProgStudent(id){ console.log('progress student (stage 2):', id); }
 
 async function renderCompass(){
   const compassEl = document.getElementById('compass-summary');
