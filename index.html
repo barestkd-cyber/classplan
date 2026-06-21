@@ -4888,7 +4888,7 @@ async function renderProgress(){
 
   const beltByName = {};
   window.BELTS.forEach(b => { beltByName[b.name] = b; });
-  const totalFor = name => { const b = beltByName[name]; if(!b || !b.stripes) return 0; return (b.stripes.black||[]).length + (b.stripes.red||[]).length; };
+  const totalFor = name => { const b = beltByName[name]; if(!b || !b.stripes) return 0; return (b.stripes.black||[]).length + (b.stripes.colored||[]).length; };
 
   const f = ((document.getElementById('prog-search')||{}).value || '').toLowerCase();
   let rows = tkd;
