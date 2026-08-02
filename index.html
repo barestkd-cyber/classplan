@@ -2116,7 +2116,7 @@ function renderMyClasses() {
       cycleHasClasses = true;
       foundAny = true;
 
-      const weekStart = new Date(cycle.startDate);
+      const weekStart = cpDate(cycle.startDate);
       weekStart.setDate(weekStart.getDate() + wi * 7);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
@@ -2351,7 +2351,7 @@ function makeInstrRow(entry, DAYNAMES) {
 
 let currentCycle = {
   name: 'Spring Cycle 2026',
-  startDate: new Date('2026-03-30'),
+  startDate: new Date('2026-03-30T00:00:00'),
   weeks: 10,
   weeks_data: [
     { primary:'Orientation & Baseline',       secondary:"Ki-Bon 1 intro for new students. Set expectations for the cycle.",                    progress:'All students know their first stripe requirement.' },
@@ -2367,11 +2367,16 @@ let currentCycle = {
   ]
 };
 
+// Parse a cycle date the LOCAL way, whatever shape it's in. Bare
+// 'YYYY-MM-DD' strings parse as UTC midnight — the previous evening in
+// Texas — which is what shifted every week label back a day.
+function cpDate(v) {
+  return v instanceof Date ? v : new Date((v || '') + 'T00:00:00');
+}
 function getWeekNumber(cycle) {
   const today = new Date();
-  const start = cycle.startDate instanceof Date
-    ? cycle.startDate
-    : new Date((cycle.startDate||'') + 'T00:00:00');
+  const start = cpDate(cycle.startDate);
+  if (isNaN(start)) return 0;
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const diff = today - start;
   if (diff < 0) return 0;
@@ -2390,7 +2395,7 @@ function renderCycle() {
 
   const currentWeek = getWeekNumber(currentCycle);
   const end = new Date(startDate);
-  end.setDate(end.getDate() + currentCycle.weeks * 7);
+  end.setDate(end.getDate() + currentCycle.weeks * 7 - 1); // last day OF the cycle, not the day after
   const fmt = d => d instanceof Date && !isNaN(d) ? `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}` : '—';
 
   header.innerHTML = `
@@ -2421,7 +2426,7 @@ function renderCycle() {
     const isActive = wNum === currentWeek;
     const isPast = wNum < currentWeek;
 
-    const weekStart = new Date(currentCycle.startDate);
+    const weekStart = new Date(startDate); // reuse the local-normalized date, not a UTC re-parse
     weekStart.setDate(weekStart.getDate() + i * 7);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
@@ -2466,7 +2471,7 @@ function renderCycle() {
     const saveBtn = document.createElement('button');
     saveBtn.style.cssText = 'margin-top:14px;width:100%;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;background:var(--gold);color:var(--black);border:none;padding:12px;border-radius:3px;cursor:pointer;';
     saveBtn.textContent = 'Save Cycle';
-    saveBtn.onclick = () => showToast('Cycle saved');
+    saveBtn.onclick = async () => { await saveCycleToSupabase(currentCycle, true); showToast('Cycle saved'); };
     weeksEl.appendChild(saveBtn);
   }
 
@@ -2624,7 +2629,7 @@ function toggleSharePlan(key) {
 }
 
 function openArchiveRunView(c, wi, cycle) {
-  const weekStart = new Date(cycle.startDate);
+  const weekStart = cpDate(cycle.startDate);
   weekStart.setDate(weekStart.getDate() + wi * 7);
   const fmt = d => `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
   const DAYNAMES = ['Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -2805,7 +2810,7 @@ function renderArchives() {
     const cycleEl = document.createElement('div');
     cycleEl.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:4px;';
 
-    const end = new Date(cycle.startDate);
+    const end = cpDate(cycle.startDate);
     end.setDate(end.getDate() + cycle.weeks * 7);
 
     // Cycle header — tap to expand
@@ -2830,7 +2835,7 @@ function renderArchives() {
 
     // Week rows inside cycle
     cycle.weeks_data.forEach((week, wi) => {
-      const weekStart = new Date(cycle.startDate);
+      const weekStart = cpDate(cycle.startDate);
       weekStart.setDate(weekStart.getDate() + wi * 7);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
@@ -3766,20 +3771,10 @@ function showAdminTab(name) {
   if (name==='hours') renderHours();
   if (name==='templates') renderTemplateList();
   if (name==='cycle') {
-    if (!currentCycle.testingDates) currentCycle.testingDates = [
-      {id:'td-1', label:'Cubs Testing',       date:'2026-06-06'},
-      {id:'td-2', label:'Color Belt Testing',  date:'2026-06-07'},
-      {id:'td-3', label:'Black Belt Testing',  date:'2026-06-07'},
-    ];
-    if (!currentCycle.awardsDate) currentCycle.awardsDate = '2026-06-14';
-    if (!currentCycle.followingCycleBegins) currentCycle.followingCycleBegins = '2026-06-22';
-    if (!currentCycle.formBeginner) currentCycle.formBeginner = 'Dan-Gun';
-    if (!currentCycle.formInter) currentCycle.formInter = 'Joong-Gun';
-    if (!currentCycle.formAdv) currentCycle.formAdv = 'Hwa-Rang';
+    // Blank fields stay blank on a loaded cycle — pre-filling them published
+    // invented dates to students on the next Save.
+    if (!currentCycle.testingDates) currentCycle.testingDates = [];
     if (!currentCycle.rotationHalf) currentCycle.rotationHalf = '1';
-    if (typeof currentCycle.startDate !== 'string') {
-      currentCycle.startDate = currentCycle.startDate.toISOString().split('T')[0];
-    }
     renderCycleManager();
   }
 }
@@ -3977,7 +3972,15 @@ function renderCycleManager() {
     const removeBtn = document.createElement('button');
     removeBtn.style.cssText = 'width:100%;margin-top:6px;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--border);color:var(--muted);padding:8px;border-radius:3px;cursor:pointer;';
     removeBtn.textContent = 'Remove This Cycle';
-    removeBtn.onclick = (e) => { inlineConfirm(e.currentTarget, 'Remove ' + (cycle.name||'this cycle') + '?', () => { futureCycles.splice(i, 1); renderCycleManager(); }); };
+    removeBtn.onclick = (e) => { inlineConfirm(e.currentTarget, 'Remove ' + (cycle.name||'this cycle') + '?', async () => {
+      // Delete the row too — splicing only the array left the cycle in the DB,
+      // where it reappeared on reload and showed to students as upcoming.
+      if (cycle.supabase_id) {
+        const { error } = await sb.from('cycle_data').delete().eq('id', cycle.supabase_id);
+        if (error) { showToast('Remove failed: ' + error.message); return; }
+      }
+      futureCycles.splice(i, 1); renderCycleManager();
+    }); };
     card.querySelector('.cycle-card-body').appendChild(removeBtn);
     list.appendChild(card);
   });
@@ -4099,7 +4102,7 @@ function buildCycleCard(id, cycle, editable) {
     setTimeout(() => renderTestingDatesFor(id, cycle), 0);
   } else {
     // Read-only past cycle
-    const startD = cycle.startDate ? new Date(cycle.startDate) : null;
+    const startD = cycle.startDate ? cpDate(cycle.startDate) : null;
     const awardsD = cycle.awardsDate ? new Date(cycle.awardsDate+'T00:00:00') : null;
     const fmt = d => d ? d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
     body.innerHTML = `
@@ -4213,16 +4216,24 @@ async function saveCycleToSupabase(cycle, isActive) {
   };
 
   if(cycle.supabase_id) {
-    await sb.from('cycle_data').update(row).eq('id', cycle.supabase_id);
+    const { error } = await sb.from('cycle_data').update(row).eq('id', cycle.supabase_id);
+    if(error){ showToast('Cycle save failed: ' + error.message); return; }
   } else {
-    const { data } = await sb.from('cycle_data').insert(row).select().single();
+    const { data, error } = await sb.from('cycle_data').insert(row).select().single();
+    if(error){ showToast('Cycle save failed: ' + error.message); return; }
     if(data) cycle.supabase_id = data.id;
+  }
+  // Exactly one active cycle: demote every other row still flagged active.
+  if(isActive && cycle.supabase_id) {
+    await sb.from('cycle_data').update({ is_active: false, updated_at: new Date().toISOString() })
+      .neq('id', cycle.supabase_id).eq('is_active', true);
   }
 }
 
 async function loadCycleFromSupabase() {
   const { data, error } = await sb.from('cycle_data').select('*').order('updated_at', { ascending: false });
-  if(error || !data || !data.length) return;
+  if(error){ console.error('cycle_data load', error); showToast('Cycle load failed — working from local defaults'); return; }
+  if(!data || !data.length) return;
 
   const active = data.find(c => c.is_active);
   if(active) {
@@ -4355,9 +4366,14 @@ function startNewCycle() {
   }
 }
 
-function doArchiveCycle() {
+async function doArchiveCycle() {
   const banner = document.getElementById('archiveConfirmBanner');
   if (banner) banner.remove();
+  // Persisting the hand-off: the outgoing cycle's row is demoted (not
+  // overwritten), and the promoted cycle keeps ITS OWN row. Before this,
+  // nothing here touched the database — a refresh undid the archive, and the
+  // next Save overwrote the old cycle's row with the new cycle's data.
+  const outgoingId = currentCycle.supabase_id || null;
 
   // Archive current cycle with all its data
   ARCHIVED_CYCLES.unshift({
@@ -4377,8 +4393,9 @@ function doArchiveCycle() {
   const nextStart = currentCycle.followingCycleBegins || '';
 
   if (futureCycles.length > 0) {
-    // Promote first future cycle to current
+    // Promote first future cycle to current — reusing its own DB row.
     const next = futureCycles.shift();
+    currentCycle.supabase_id = next.supabase_id || null;
     currentCycle.name = next.name || 'New Cycle';
     currentCycle.startDate = next.startDate || nextStart || '';
     currentCycle.weeks = next.weeks || 10;
@@ -4391,6 +4408,7 @@ function doArchiveCycle() {
     currentCycle.rotationHalf = next.rotationHalf || '1';
     showToast(`${currentCycle.name} is now the current cycle`);
   } else {
+    currentCycle.supabase_id = null; // brand-new cycle gets its own row on save
     currentCycle.name = 'New Cycle';
     currentCycle.startDate = nextStart || '';
     currentCycle.weeks = 10;
@@ -4405,6 +4423,11 @@ function doArchiveCycle() {
   }
 
   currentCycle.weeks_data = Array.from({length:currentCycle.weeks},()=>({primary:'',secondary:'',progress:''}));
+  // Persist the hand-off: demote the outgoing row, promote the new current.
+  if (outgoingId) {
+    await sb.from('cycle_data').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', outgoingId);
+  }
+  await saveCycleToSupabase(currentCycle, true);
   renderCycleManager();
 }
 
@@ -4507,6 +4530,16 @@ async function publishScheduleTemplate() {
   }));
   const { error } = await BTKD.sb.from('schedule_template').upsert(rows, { onConflict: 'day,time' });
   if (error) { showToast('Saved locally — publish failed: ' + error.message); return; }
+  // Remove slots that no longer exist in the editor — without this, deleted
+  // or re-timed classes lived on as ghost rows that students and the kiosk
+  // kept rendering forever.
+  const { data: existing, error: exErr } = await BTKD.sb.from('schedule_template').select('day,time');
+  if (!exErr && existing) {
+    const keep = new Set(rows.map(r => r.day + '|' + r.time));
+    for (const s of existing.filter(r => !keep.has(r.day + '|' + r.time))) {
+      await BTKD.sb.from('schedule_template').delete().match({ day: s.day, time: s.time });
+    }
+  }
   showToast('Schedule published');
 }
 
