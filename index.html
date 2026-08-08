@@ -4512,6 +4512,37 @@ function saveScheduleEdits() {
   publishScheduleTemplate();
 }
 
+// Load the live schedule from the shared schedule_template table so the app
+// starts from what's actually published, not this file's baked-in snapshot.
+// Without this, editor changes lived only in memory: every reload re-seeded
+// the stale snapshot, and the next publish silently reverted other apps.
+// The array is MUTATED IN PLACE (splice) because the whole app holds direct
+// references to SCHEDULE_TEMPLATE. On any failure the snapshot stays and the
+// app works offline exactly as before.
+async function hydrateScheduleTemplate(){
+  try {
+    const { data, error } = await sb.from('schedule_template')
+      .select('day,time,time_h,time_m,label,belt,prog_css,default_instructor,duration');
+    if (error || !data || !data.length) {
+      if (error) console.warn('[classplan] schedule hydrate failed, using baked-in copy:', error.message);
+      return;
+    }
+    const rows = data
+      .filter(r => Number.isInteger(r.day) && r.time)
+      .sort((a,b) => a.day - b.day || (a.time_h*60 + a.time_m) - (b.time_h*60 + b.time_m))
+      .map(r => ({
+        day: r.day, time: r.time, timeH: r.time_h, timeM: r.time_m,
+        label: r.label || '', belt: r.belt || '', progCss: r.prog_css || '',
+        defaultInstructor: r.default_instructor || '', duration: r.duration || 45
+      }));
+    if (!rows.length) return;
+    SCHEDULE_TEMPLATE.splice(0, SCHEDULE_TEMPLATE.length, ...rows);
+    buildGrid();
+  } catch (e) {
+    console.warn('[classplan] schedule hydrate failed, using baked-in copy:', e);
+  }
+}
+
 // Publish the current SCHEDULE_TEMPLATE (incl. any admin edits applied to it)
 // to the shared schedule_template table so other apps (e.g. curriculum) can
 // read the live schedule. Upsert on the (day, time) unique key so
@@ -4587,6 +4618,7 @@ async function initAuth(){
     await loadUserProfile();
     if(!cpIsStaff()){ showCpDenied(); return; }
     showCpApp();
+    await hydrateScheduleTemplate();
     await loadCycleFromSupabase();
     renderCycleManager();
   } else {
@@ -4610,6 +4642,7 @@ async function submitNewPassword(){
   await loadUserProfile();
   if(!cpIsStaff()){ showCpDenied(); return; }
   showCpApp();
+  await hydrateScheduleTemplate();
   await loadCycleFromSupabase();
   renderCycleManager();
 }
@@ -4657,6 +4690,7 @@ async function doCpLogin(){
   await loadUserProfile();
   if(!cpIsStaff()){ showCpDenied(); return; }
   showCpApp();
+  await hydrateScheduleTemplate();
   await loadCycleFromSupabase();
   renderCycleManager();
 }
