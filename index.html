@@ -909,7 +909,7 @@ const SCHEDULE_TEMPLATE = [
   {day:1,time:'4:00',timeH:16,timeM:0, label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'', duration:30, program:'Cubs', divisions:[]},
   {day:1,time:'4:30',timeH:16,timeM:30,label:'Juniors',       belt:'WHI-ORG',progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors']},
   {day:1,time:'5:15',timeH:17,timeM:15,label:"AMP'D",         belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30, program:'AMP\'D', divisions:['Juniors','Teens/Adults']},
-  {day:1,time:'5:45',timeH:17,timeM:45,label:'Leadership',    belt:'',       progCss:'prog-leader',  defaultInstructor:'',  duration:30, program:'Leadership', divisions:['Juniors','Teens/Adults']},
+  {day:1,time:'5:45',timeH:17,timeM:45,label:'Leadership',    belt:'ORG-BLK',       progCss:'prog-leader',  defaultInstructor:'',  duration:30, program:'Leadership', divisions:['Juniors','Teens/Adults']},
   {day:1,time:'6:15',timeH:18,timeM:15,label:'Juniors',       belt:'GR-BLK', progCss:'prog-juniors', defaultInstructor:'',   duration:60, program:'Taekwondo', divisions:['Juniors']},
   {day:1,time:'7:15',timeH:19,timeM:15,label:'Teens / Adults',belt:'',       progCss:'prog-teen',    defaultInstructor:'', duration:60, program:'Taekwondo', divisions:['Teens/Adults']},
 
@@ -4480,7 +4480,10 @@ function renderScheduleEditor() {
       </div>` +
       `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;">
         <input type="text" placeholder="Class name (e.g. Juniors)" value="${slot.label||''}" oninput="SCHEDULE_TEMPLATE[${origIdx}].label=this.value" style="${s}">
-        <input type="text" placeholder="Eligibility (e.g. GR-BLK, Pre-K)" value="${slot.belt||''}" oninput="SCHEDULE_TEMPLATE[${origIdx}].belt=this.value" style="${s}">
+        <select style="${s}appearance:none;-webkit-appearance:none;" onchange="SCHEDULE_TEMPLATE[${origIdx}].belt=this.value" title="Rank range / age note">
+          ${BELT_OPTIONS.map(b=>`<option value="${b}"${(slot.belt||'')===b?' selected':''}>${b||'— no restriction —'}</option>`).join('')}
+          ${slot.belt && !BELT_OPTIONS.includes(slot.belt) ? `<option value="${slot.belt}" selected>${slot.belt} (legacy)</option>` : ''}
+        </select>
       </div>` +
       // What the class IS and who attends. The schedule states this outright
       // now; colour is derived display. Divisions only steer attendance for
@@ -4533,6 +4536,11 @@ const PROGRAM_CSS = {
 };
 const PROGRAMS = Object.keys(PROGRAM_CSS);
 const DIVISIONS = ['Juniors','Teens/Adults'];
+// Every value the belt field may hold: the rank ranges attendance filters
+// by, plus the age/level notes that filter nothing on purpose. Closed on
+// purpose - a typo like BRN-BLK used to silently no-op the filter and list
+// the whole roster.
+const BELT_OPTIONS = ['','WHI-ORG','WHI-BLU','ORG-BLK','GR-BLK','BR-BLK','WHI-BLK','All','Pre-K','Ages 2-3','13+'];
 
 function setSlotProgram(i, program){
   SCHEDULE_TEMPLATE[i].program = program;
