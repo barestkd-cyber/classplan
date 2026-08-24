@@ -917,7 +917,7 @@ const SCHEDULE_TEMPLATE = [
   // Was in the live table but not this snapshot (added via the editor
   // after the snapshot was written), so the drift test was one class blind.
   {day:2,time:'9:30',timeH:9,timeM:30,label:'Little Kickers',belt:'Ages 2-3',progCss:'prog-cubs',defaultInstructor:'',duration:40, program:'Little Kickers', divisions:[]},
-  {day:2,time:'10:15',timeH:10,timeM:15,label:'Juniors/Teens/Adults', belt:'', progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors','Teens/Adults']},
+  {day:2,time:'10:15',timeH:10,timeM:15,label:'Juniors/Teens/Adults', belt:'All', progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors','Teens/Adults']},
   {day:2,time:'4:15', timeH:16,timeM:15,label:'Juniors',      belt:'BR-BLK',progCss:'prog-juniors', defaultInstructor:'',       duration:30, program:'Taekwondo', divisions:['Juniors']},
   {day:2,time:'4:45',timeH:16,timeM:45,label:'Juniors',       belt:'WHI-BLU',progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors']},
   {day:2,time:'5:30',timeH:17,timeM:30,label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'',       duration:30, program:'Cubs', divisions:[]},
@@ -4540,7 +4540,7 @@ const DIVISIONS = ['Juniors','Teens/Adults'];
 // by, plus the age/level notes that filter nothing on purpose. Closed on
 // purpose - a typo like BRN-BLK used to silently no-op the filter and list
 // the whole roster.
-const BELT_OPTIONS = ['','WHI-ORG','WHI-BLU','ORG-BLK','GR-BLK','BR-BLK','WHI-BLK','All','Pre-K','Ages 2-3','13+'];
+const BELT_OPTIONS = ['','WHI-ORG','WHI-BLU','ORG-BLK','GR-BLK','BR-BLK','All','Pre-K','Ages 2-3','13+'];
 
 function setSlotProgram(i, program){
   SCHEDULE_TEMPLATE[i].program = program;
