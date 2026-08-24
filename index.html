@@ -31,7 +31,7 @@
   --bd-none:#3a3a42; --bd-draft:#3a3a42; --bd-sub:#d9b85a; --bd-rev:#2ed573; --bd-resub:#a060c0;
   --grid-line:#3a3a42; --grid-muted:#9a9aa2; --grid-bg:#0d0d0d;
   --bg-unassigned:#1a1a1e; --bd-unassigned:#33333a;
-  --prog-red:#ff5a5a; --prog-cubs:#ff9f43; --prog-ampd:#2ed573; --prog-kick:#4aa3ff; --prog-leader:#efce6b;
+  --prog-red:#ff5a5a; --prog-cubs:#ff9f43; --prog-ampd:#2ed573; --prog-kick:#4aa3ff; --prog-leader:#efce6b; --prog-jj:#a1887f;
 }
 
 /* ── LIGHT MODE ── */
@@ -52,7 +52,7 @@ body.light {
   --bd-none:#c4d0da; --bd-draft:#c4d0da; --bd-sub:#c9a53a; --bd-rev:#27ae60; --bd-resub:#8e44ad;
   --grid-line:#000000; --grid-muted:#7a828d; --grid-bg:#ffffff;
   --bg-unassigned:#eef2f6; --bd-unassigned:#c4d0da;
-  --prog-red:#d62828; --prog-cubs:#e0701a; --prog-ampd:#1e9e54; --prog-kick:#2d7fd6; --prog-leader:#d4a216;
+  --prog-red:#d62828; --prog-cubs:#e0701a; --prog-ampd:#1e9e54; --prog-kick:#2d7fd6; --prog-leader:#d4a216; --prog-jj:#6d4c41;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--black);color:var(--text);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden;}
@@ -111,6 +111,7 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .prog-cubs{color:var(--prog-cubs);}
 .prog-ampd{color:var(--prog-ampd);}
 .prog-kick{color:var(--prog-kick);}
+.prog-jj{color:var(--prog-jj);}   /* brown, matching the public schedule page */
 .prog-leader{color:var(--prog-leader);}
 .prog-private{color:var(--muted);}
 
@@ -1136,12 +1137,12 @@ function buildGrid() {
         const pill = document.createElement('div');
         pill.className = 'class-cell status-' + status + (isUnassigned ? ' status-unassigned' : '');
         pill.style.cssText = 'position:absolute;top:' + stackTop + 'px;height:' + pillH + 'px;left:2px;right:2px;border-radius:3px;overflow:hidden;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;justify-content:flex-start;';
-        const beltDiv = tmpl.belt ? '<div class="cell-belt ' + tmpl.progCss + '">' + tmpl.belt + '</div>' : '';
+        const beltDiv = tmpl.belt ? '<div class="cell-belt ' + progCssOf(tmpl) + '">' + tmpl.belt + '</div>' : '';
         const instrDiv = instructor
           ? '<div class="cell-instructor">' + instructor + '</div>'
           : '<div class="cell-unassigned-lbl" style="font-size:8px;">' + (isAdmin ? 'Assign' : '—') + '</div>';
         pill.innerHTML = '<div class="cell-time">' + fmtTimeAMPM(tmpl.timeH,tmpl.timeM) + '</div>' +
-          '<div class="cell-program ' + tmpl.progCss + '">' + tmpl.label + '</div>' +
+          '<div class="cell-program ' + progCssOf(tmpl) + '">' + tmpl.label + '</div>' +
           beltDiv + instrDiv;
         const entry = {...tmpl, ...pd, instructor, weekOffset: currentWeekOffset};
         pill.addEventListener('click', () => openCellModal(entry));
@@ -1188,12 +1189,12 @@ function buildGrid() {
       cell.className = 'class-cell status-' + status + (isUnassigned ? ' status-unassigned' : '');
       cell.style.cssText = 'position:absolute;top:' + top + 'px;height:' + height + 'px;left:2px;right:2px;border-radius:3px;overflow:hidden;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;justify-content:flex-start;';
 
-      const beltDiv = tmpl.belt ? '<div class="cell-belt ' + tmpl.progCss + '">' + tmpl.belt + '</div>' : '';
+      const beltDiv = tmpl.belt ? '<div class="cell-belt ' + progCssOf(tmpl) + '">' + tmpl.belt + '</div>' : '';
       const instrDiv = instructor
         ? '<div class="cell-instructor">' + instructor + '</div>'
         : '<div class="cell-unassigned-lbl" style="font-size:8px;">' + (isAdmin ? 'Assign' : '—') + '</div>';
       cell.innerHTML = '<div class="cell-time">' + fmtTimeAMPM(tmpl.timeH, tmpl.timeM) + '</div>' +
-        '<div class="cell-program ' + tmpl.progCss + '">' + tmpl.label + '</div>' +
+        '<div class="cell-program ' + progCssOf(tmpl) + '">' + tmpl.label + '</div>' +
         beltDiv + instrDiv;
 
       const entry = {...tmpl, ...pd, instructor, weekOffset: currentWeekOffset};
@@ -1220,7 +1221,7 @@ function openCellModal(entry) {
   const actions = document.getElementById('modalActions');
 
   const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  title.className = 'modal-title ' + entry.progCss;
+  title.className = 'modal-title ' + progCssOf(entry);
 
   const dur = entry.duration || 45;
   const endH = entry.timeH + Math.floor((entry.timeM + dur) / 60);
@@ -2046,7 +2047,7 @@ function renderMyClasses() {
       const statusColor = {reviewed:'#27ae60',submitted:'var(--gold)',draft:'var(--muted)',none:'var(--faint)'}[entry.status];
       row.innerHTML = `
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.02em;" class="${entry.progCss}">${entry.label}${entry.belt?' — '+entry.belt:''}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.02em;" class="${progCssOf(entry)}">${entry.label}${entry.belt?' — '+entry.belt:''}</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);margin-top:2px;text-transform:uppercase;">${DAYNAMES[entry.day]} &bull; ${range}</div>
         </div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${statusColor};">${statusLabel}</div>
@@ -2336,7 +2337,7 @@ function makeInstrRow(entry, DAYNAMES) {
   const statusLabel = {reviewed:'Reviewed',submitted:'Submitted',draft:'Draft',none:'No Plan'}[entry.status]||'No Plan';
   row.innerHTML = `
     <div style="flex:1;min-width:0;">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:.02em;" class="${entry.progCss}">${entry.label}${entry.belt?' — '+entry.belt:''}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:.02em;" class="${progCssOf(entry)}">${entry.label}${entry.belt?' — '+entry.belt:''}</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);margin-top:2px;text-transform:uppercase;">${DAYNAMES[entry.day]} &bull; ${range}</div>
     </div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${statusColor};">${statusLabel}</div>
@@ -3023,8 +3024,25 @@ function removeLeader(key, idx, btn) {
     openCellModal(currentEntry);
   });
 }
+/* Which colour class a scheduled class is DRAWN with.
+ *
+ * Kickboxing and Jiu Jitsu share prog_css, and the label is what tells them
+ * apart - the same rule the public trial-booking function uses to bucket the
+ * schedule. This is presentation only: the stored prog_css must stay
+ * prog-kick, because publishScheduleTemplate writes it back to the shared
+ * table and the website matches on it. */
+function progCssOf(x) {
+  if (!x) return '';
+  if (/(jiu|bjj)/i.test(String(x.label || ''))) return 'prog-jj';
+  return x.progCss || '';
+}
+
 function getCatProgCss(label) {
   const map = {'Juniors':'prog-juniors','Teens / Adults':'prog-teen','Cubs':'prog-cubs',"AMP'D":'prog-ampd','Kickboxing':'prog-kick','Forms':'prog-forms','Sparring':'prog-sparring','Leadership':'prog-leader','All Belts':'prog-all'};
+  // Jiu Jitsu is written several ways on the schedule ("Jiu Jitsu",
+  // "Jiu-Jitsu (BJJ)"), so it is matched rather than listed. Without this it
+  // fell through to the default and the archive view drew it red.
+  if (/(jiu|bjj)/i.test(String(label || ''))) return 'prog-jj';
   return map[label] || 'prog-juniors';
 }
 
@@ -3164,7 +3182,7 @@ function renderTemplateList() {
     SCHEDULE_TEMPLATE.forEach(slot => {
       if (!byDay[slot.day]) byDay[slot.day] = [];
       const instr = tmpl.assignments[templateSlotKey(slot.day, slot.time)] || '—';
-      byDay[slot.day].push({time:slot.time, label:slot.label, belt:slot.belt, instr, progCss:slot.progCss});
+      byDay[slot.day].push({time:slot.time, label:slot.label, belt:slot.belt, instr, progCss:progCssOf(slot)});
     });
 
     const rowsHTML = Object.entries(byDay).map(([day, slots]) => {
@@ -3588,7 +3606,7 @@ function useLibPlan(id) {
           const pd = getPlanData(0, t.day, t.time);
           const instr = pd.instructor || t.defaultInstructor || 'Unassigned';
           return `<button onclick="applyLibPlanToSlot('${id}',${t.day},'${t.time}')" style="background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:10px 13px;text-align:left;cursor:pointer;width:100%;">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;" class="${t.progCss}">${t.label}${t.belt?' — '+t.belt:''}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;" class="${progCssOf(t)}">${t.label}${t.belt?' — '+t.belt:''}</div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">${DAYNAMES[t.day]} · ${t.time} · ${instr}</div>
           </button>`;
         }).join('')}
