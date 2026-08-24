@@ -900,36 +900,39 @@ let currentEntry = null;
 // Template repeated each week. weekOffset adjusts dates.
 const SCHEDULE_TEMPLATE = [
   // ── MON ──
-  {day:0,time:'4:30',timeH:16,timeM:30,label:"AMP'D",        belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30},
-  {day:0,time:'5:00',timeH:17,timeM:0, label:'Juniors',       belt:'GR-BLK', progCss:'prog-juniors', defaultInstructor:'',   duration:45},
-  {day:0,time:'5:45',timeH:17,timeM:45,label:'Kickboxing',    belt:'13+',    progCss:'prog-kick',    defaultInstructor:'',  duration:60},
-  {day:0,time:'6:45',timeH:18,timeM:45,label:'Teens / Adults',belt:'',       progCss:'prog-teen',    defaultInstructor:'', duration:45},
+  {day:0,time:'4:30',timeH:16,timeM:30,label:"AMP'D",        belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30, program:'AMP\'D', divisions:['Juniors','Teens/Adults']},
+  {day:0,time:'5:00',timeH:17,timeM:0, label:'Juniors',       belt:'GR-BLK', progCss:'prog-juniors', defaultInstructor:'',   duration:45, program:'Taekwondo', divisions:['Juniors']},
+  {day:0,time:'5:45',timeH:17,timeM:45,label:'Kickboxing',    belt:'13+',    progCss:'prog-kick',    defaultInstructor:'',  duration:60, program:'Kickboxing', divisions:['Teens/Adults']},
+  {day:0,time:'6:45',timeH:18,timeM:45,label:'Teens / Adults',belt:'',       progCss:'prog-teen',    defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Teens/Adults']},
 
   // ── TUE ──
-  {day:1,time:'4:00',timeH:16,timeM:0, label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'', duration:30},
-  {day:1,time:'4:30',timeH:16,timeM:30,label:'Juniors',       belt:'WHI-ORG',progCss:'prog-juniors', defaultInstructor:'', duration:45},
-  {day:1,time:'5:15',timeH:17,timeM:15,label:"AMP'D",         belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30},
-  {day:1,time:'5:45',timeH:17,timeM:45,label:'Leadership',    belt:'',       progCss:'prog-leader',  defaultInstructor:'',  duration:30},
-  {day:1,time:'6:15',timeH:18,timeM:15,label:'Juniors',       belt:'GR-BLK', progCss:'prog-juniors', defaultInstructor:'',   duration:60},
-  {day:1,time:'7:15',timeH:19,timeM:15,label:'Teens / Adults',belt:'',       progCss:'prog-teen',    defaultInstructor:'', duration:60},
+  {day:1,time:'4:00',timeH:16,timeM:0, label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'', duration:30, program:'Cubs', divisions:[]},
+  {day:1,time:'4:30',timeH:16,timeM:30,label:'Juniors',       belt:'WHI-ORG',progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors']},
+  {day:1,time:'5:15',timeH:17,timeM:15,label:"AMP'D",         belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30, program:'AMP\'D', divisions:['Juniors','Teens/Adults']},
+  {day:1,time:'5:45',timeH:17,timeM:45,label:'Leadership',    belt:'',       progCss:'prog-leader',  defaultInstructor:'',  duration:30, program:'Leadership', divisions:['Juniors','Teens/Adults']},
+  {day:1,time:'6:15',timeH:18,timeM:15,label:'Juniors',       belt:'GR-BLK', progCss:'prog-juniors', defaultInstructor:'',   duration:60, program:'Taekwondo', divisions:['Juniors']},
+  {day:1,time:'7:15',timeH:19,timeM:15,label:'Teens / Adults',belt:'',       progCss:'prog-teen',    defaultInstructor:'', duration:60, program:'Taekwondo', divisions:['Teens/Adults']},
 
   // ── WED ──
-  {day:2,time:'10:15',timeH:10,timeM:15,label:'Juniors/Teens/Adults', belt:'', progCss:'prog-juniors', defaultInstructor:'', duration:45},
-  {day:2,time:'4:15', timeH:16,timeM:15,label:'Juniors',      belt:'BR-BLK',progCss:'prog-juniors', defaultInstructor:'',       duration:30},
-  {day:2,time:'4:45',timeH:16,timeM:45,label:'Juniors',       belt:'WHI-BLU',progCss:'prog-juniors', defaultInstructor:'', duration:45},
-  {day:2,time:'5:30',timeH:17,timeM:30,label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'',       duration:30},
+  // Was in the live table but not this snapshot (added via the editor
+  // after the snapshot was written), so the drift test was one class blind.
+  {day:2,time:'9:30',timeH:9,timeM:30,label:'Little Kickers',belt:'Ages 2-3',progCss:'prog-cubs',defaultInstructor:'',duration:40, program:'Little Kickers', divisions:[]},
+  {day:2,time:'10:15',timeH:10,timeM:15,label:'Juniors/Teens/Adults', belt:'', progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors','Teens/Adults']},
+  {day:2,time:'4:15', timeH:16,timeM:15,label:'Juniors',      belt:'BR-BLK',progCss:'prog-juniors', defaultInstructor:'',       duration:30, program:'Taekwondo', divisions:['Juniors']},
+  {day:2,time:'4:45',timeH:16,timeM:45,label:'Juniors',       belt:'WHI-BLU',progCss:'prog-juniors', defaultInstructor:'', duration:45, program:'Taekwondo', divisions:['Juniors']},
+  {day:2,time:'5:30',timeH:17,timeM:30,label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'',       duration:30, program:'Cubs', divisions:[]},
 
   // ── THU ──
-  {day:3,time:'4:30',timeH:16,timeM:30,label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'', duration:30},
-  {day:3,time:'5:00',timeH:17,timeM:0, label:"AMP'D",         belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30},
-  {day:3,time:'5:30',timeH:17,timeM:30,label:'Forms',         belt:'All',    progCss:'prog-forms',   defaultInstructor:'',  duration:45},
-  {day:3,time:'6:15',timeH:18,timeM:15,label:'Sparring',      belt:'All',    progCss:'prog-sparring',defaultInstructor:'',  duration:45},
-  {day:3,time:'7:00',timeH:19,timeM:0, label:'Jiu-Jitsu (BJJ)',belt:'13+',   progCss:'prog-kick',    defaultInstructor:'',  duration:45},
+  {day:3,time:'4:30',timeH:16,timeM:30,label:'Cubs',          belt:'Pre-K',  progCss:'prog-cubs',    defaultInstructor:'', duration:30, program:'Cubs', divisions:[]},
+  {day:3,time:'5:00',timeH:17,timeM:0, label:"AMP'D",         belt:'',       progCss:'prog-ampd',    defaultInstructor:'',  duration:30, program:'AMP\'D', divisions:['Juniors','Teens/Adults']},
+  {day:3,time:'5:30',timeH:17,timeM:30,label:'Forms',         belt:'All',    progCss:'prog-forms',   defaultInstructor:'',  duration:45, program:'Taekwondo', divisions:['Juniors','Teens/Adults']},
+  {day:3,time:'6:15',timeH:18,timeM:15,label:'Sparring',      belt:'All',    progCss:'prog-sparring',defaultInstructor:'',  duration:45, program:'Taekwondo', divisions:['Juniors','Teens/Adults']},
+  {day:3,time:'7:00',timeH:19,timeM:0, label:'Jiu-Jitsu (BJJ)',belt:'13+',   progCss:'prog-kick',    defaultInstructor:'',  duration:45, program:'Jiu Jitsu', divisions:['Teens/Adults']},
 
   // ── SAT ──
-  {day:5,time:'9:30', timeH:9,  timeM:30, label:'Cubs',          belt:'Pre-K', progCss:'prog-cubs',    defaultInstructor:'', duration:30},
-  {day:5,time:'10:00',timeH:10, timeM:0,  label:'Juniors',       belt:'',      progCss:'prog-juniors', defaultInstructor:'',  duration:60},
-  {day:5,time:'11:00',timeH:11, timeM:0,  label:'Teens / Adults',belt:'',      progCss:'prog-teen',    defaultInstructor:'',  duration:60},
+  {day:5,time:'9:30', timeH:9,  timeM:30, label:'Cubs',          belt:'Pre-K', progCss:'prog-cubs',    defaultInstructor:'', duration:30, program:'Cubs', divisions:[]},
+  {day:5,time:'10:00',timeH:10, timeM:0,  label:'Juniors',       belt:'',      progCss:'prog-juniors', defaultInstructor:'',  duration:60, program:'Taekwondo', divisions:['Juniors']},
+  {day:5,time:'11:00',timeH:11, timeM:0,  label:'Teens / Adults',belt:'',      progCss:'prog-teen',    defaultInstructor:'',  duration:60, program:'Taekwondo', divisions:['Teens/Adults']},
 ];
 
 const planData = {};
@@ -4478,6 +4481,21 @@ function renderScheduleEditor() {
       `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;">
         <input type="text" placeholder="Class name (e.g. Juniors)" value="${slot.label||''}" oninput="SCHEDULE_TEMPLATE[${origIdx}].label=this.value" style="${s}">
         <input type="text" placeholder="Eligibility (e.g. GR-BLK, Pre-K)" value="${slot.belt||''}" oninput="SCHEDULE_TEMPLATE[${origIdx}].belt=this.value" style="${s}">
+      </div>` +
+      // What the class IS and who attends. The schedule states this outright
+      // now; colour is derived display. Divisions only steer attendance for
+      // Taekwondo (Juniors and Teens/Adults are rostered separately); for
+      // other programs they are descriptive until those programs split.
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;">
+        <select style="${s}appearance:none;-webkit-appearance:none;" onchange="setSlotProgram(${origIdx},this.value)" title="Program">
+          ${PROGRAMS.map(p=>`<option value="${p}"${slot.program===p?' selected':''}>${p}</option>`).join('')}
+          ${slot.program && !PROGRAMS.includes(slot.program) ? `<option value="${slot.program}" selected>${slot.program}</option>` : ''}
+          ${!slot.program ? '<option value="" selected disabled>Program…</option>' : ''}
+        </select>
+        <div style="display:flex;gap:12px;align-items:center;">
+          ${DIVISIONS.map(d=>`<label style="display:flex;align-items:center;gap:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;">
+            <input type="checkbox" ${(slot.divisions||[]).includes(d)?'checked':''} onchange="toggleSlotDivision(${origIdx},'${d.replace(/'/g,"\\'")}',this.checked)">${d}</label>`).join('')}
+        </div>
       </div>`;
 
     list.appendChild(row);
@@ -4504,10 +4522,34 @@ function updateSlotProg(idx, css, label) {
   SCHEDULE_TEMPLATE[idx].label = label;
 }
 
+/* Display colour per program. progCss is DISPLAY DATA, but the public site
+ * still buckets classes off it (prog-kick + label tells Kickboxing from Jiu
+ * Jitsu), so a new class must carry the right one. Until now every new slot
+ * was hardcoded prog-juniors: a new Jiu Jitsu class rendered red, pulled the
+ * Juniors roster in the CRM, and bucketed as Taekwondo on the website. */
+const PROGRAM_CSS = {
+  'Taekwondo':'prog-juniors', 'Cubs':'prog-cubs', 'Little Kickers':'prog-cubs',
+  'Kickboxing':'prog-kick', 'Jiu Jitsu':'prog-kick', "AMP'D":'prog-ampd', 'Leadership':'prog-leader'
+};
+const PROGRAMS = Object.keys(PROGRAM_CSS);
+const DIVISIONS = ['Juniors','Teens/Adults'];
+
+function setSlotProgram(i, program){
+  SCHEDULE_TEMPLATE[i].program = program;
+  SCHEDULE_TEMPLATE[i].progCss = PROGRAM_CSS[program] || SCHEDULE_TEMPLATE[i].progCss;
+}
+function toggleSlotDivision(i, div, on){
+  const d = SCHEDULE_TEMPLATE[i].divisions || (SCHEDULE_TEMPLATE[i].divisions = []);
+  const at = d.indexOf(div);
+  if(on && at === -1) d.push(div);
+  if(!on && at !== -1) d.splice(at, 1);
+}
+
 function addScheduleSlot() {
   SCHEDULE_TEMPLATE.push({
     day:0, time:'4:00', timeH:16, timeM:0,
     label:'Juniors', belt:'', progCss:'prog-juniors',
+    program:'Taekwondo', divisions:['Juniors'],
     defaultInstructor:'', duration:45
   });
   renderScheduleEditor();
@@ -4540,7 +4582,7 @@ function saveScheduleEdits() {
 async function hydrateScheduleTemplate(){
   try {
     const { data, error } = await sb.from('schedule_template')
-      .select('day,time,time_h,time_m,label,belt,prog_css,default_instructor,duration');
+      .select('day,time,time_h,time_m,label,belt,prog_css,default_instructor,duration,program,divisions');
     if (error || !data || !data.length) {
       if (error) console.warn('[classplan] schedule hydrate failed, using baked-in copy:', error.message);
       return;
@@ -4551,6 +4593,7 @@ async function hydrateScheduleTemplate(){
       .map(r => ({
         day: r.day, time: r.time, timeH: r.time_h, timeM: r.time_m,
         label: r.label || '', belt: r.belt || '', progCss: r.prog_css || '',
+        program: r.program || '', divisions: r.divisions || [],
         defaultInstructor: r.default_instructor || '', duration: r.duration || 45
       }));
     if (!rows.length) return;
@@ -4575,6 +4618,10 @@ async function publishScheduleTemplate() {
     label: t.label || '',
     belt: t.belt || '',
     prog_css: t.progCss || '',
+    // The two Phase-1 columns. Omitting them here would null them on the
+    // next publish and quietly undo the migration.
+    program: t.program || null,
+    divisions: (t.divisions && t.divisions.length) ? t.divisions : null,
     default_instructor: t.defaultInstructor || '',
     duration: t.duration || 45
   }));
