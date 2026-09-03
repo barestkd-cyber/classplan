@@ -5122,8 +5122,12 @@ function renderProgSheet(){
       + '<div style="font-size:.82rem;font-weight:700;margin-bottom:5px;color:'+(st.color==='#1c1c1c'?'var(--text)':st.color)+'">'+st.label+'</div>'
       + (st.desc ? '<div style="font-size:.74rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">'+st.desc+'</div>' : '')
       + (on && !pending && c.earnedFrom && c.earnedFrom[st.id] ? '<div style="font-size:.68rem;color:var(--muted);margin-bottom:8px;">Logged in '+({profile:'the student profile',crm:'the CRM',classplan:'class plan'}[c.earnedFrom[st.id]]||c.earnedFrom[st.id])+(c.earnedBy&&c.earnedBy[st.id]?' · '+c.earnedBy[st.id]:'')+'</div>' : '')
-      + (pending ? '<div style="font-size:.72rem;color:#B88A00;margin-bottom:8px;">Logged in the student profile' + (c.earnedBy && c.earnedBy[st.id] ? ' — they say <b>'+c.earnedBy[st.id]+'</b> gave it' : '') + '. Confirm it if it is right.</div>'
-        + '<button class="prog-log-btn" style="border-color:#2ecc71;color:#2ecc71;" onclick="verifyProgStripe(\''+st.id+'\')"><div class="prog-log-circle" style="border-color:#2ecc71;"></div><span>Verify this stripe</span></button>' : '')
+      // Amber says a family logged it and it is not confirmed yet. There is
+      // deliberately NO verify button here: class plan is where stripes get
+      // logged, and offering two different confirmations in one place read
+      // as confusing (owner, 2026-09-03). Verifying happens on the CRM
+      // dashboard.
+      + (pending ? '<div style="font-size:.72rem;color:#B88A00;margin-bottom:8px;">Logged in the student profile' + (c.earnedBy && c.earnedBy[st.id] ? ' — they say <b>'+c.earnedBy[st.id]+'</b> gave it' : '') + '. Waiting to be verified on the dashboard.</div>' : '')
       + '<button class="prog-log-btn '+(on?'logged':'')+'" onclick="toggleProgStripe(\''+st.id+'\')"><div class="prog-log-circle '+(on?'earned':'')+'">'+(on?'✓':'')+'</div><span>'+(pending?'Remove it':(on?'Earned — tap to remove':'Log this stripe'))+'</span></button>'
       + '</div>'; }).join('');
   document.getElementById('prog-sheet-body').innerHTML =
@@ -5149,23 +5153,6 @@ async function toggleProgStripe(key){
     if(error){ console.error('log error', error); return; }
     c.earned.set(key, 'staff');
   }
-  _progDirty = true;
-  renderProgSheet();
-  const p = document.getElementById('progpanel-'+key); if(p) p.classList.add('open');
-}
-
-/* Confirm a stripe a family logged. Scoped to source='family' so it can
-   only ever promote a pending row - never re-stamp an instructor's own. */
-async function verifyProgStripe(key){
-  const c = _progCtx; if(!c) return;
-  const awardedBy = await progAwarder();
-  const { data, error } = await sb.from('student_stripes')
-    .update({ source: 'verified', awarded_by: awardedBy })
-    .eq('student_id', c.id).eq('belt', c.rank).eq('stripe_key', key)
-    .eq('source', 'family').select('id');
-  if(error){ console.error('verify error', error); return; }
-  if(!data || !data.length) return;   // somebody else got there first
-  c.earned.set(key, 'verified');
   _progDirty = true;
   renderProgSheet();
   const p = document.getElementById('progpanel-'+key); if(p) p.classList.add('open');
