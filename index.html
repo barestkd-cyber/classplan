@@ -5084,11 +5084,14 @@ async function openProgStudent(id){
   const { data: s } = await sb.from('students').select('*').eq('id', id).single();
   if(!s) return;
   const { left, right } = progStripesFor(s.rank);
-  const { data: rows } = await sb.from('student_stripes').select('stripe_key,source').eq('student_id', id).eq('belt', s.rank);
+  const { data: rows } = await sb.from('student_stripes').select('stripe_key,source,awarded_by,origin').eq('student_id', id).eq('belt', s.rank);
   // Map, not Set: the source is what tells a family log apart from ours.
   const earned = new Map((rows||[]).map(r => [r.stripe_key, r.source || 'staff']));
+  // Who they say gave it, and which app it came from.
+  const earnedBy = {}; const earnedFrom = {};
+  (rows||[]).forEach(r => { earnedBy[r.stripe_key] = r.awarded_by || ''; earnedFrom[r.stripe_key] = r.origin || ''; });
   const belt = (window.BELTS||[]).find(b => b.name === s.rank);
-  _progCtx = { id, rank: s.rank, name: s.name, left, right, earned, beltColor: (belt && belt.color) || '#888' };
+  _progCtx = { id, rank: s.rank, name: s.name, left, right, earned, earnedBy, earnedFrom, beltColor: (belt && belt.color) || '#888' };
   renderProgSheet();
   document.getElementById('prog-overlay').classList.add('open');
 }
@@ -5118,7 +5121,8 @@ function renderProgSheet(){
     return '<div class="prog-stripe-panel" id="progpanel-'+st.id+'">'
       + '<div style="font-size:.82rem;font-weight:700;margin-bottom:5px;color:'+(st.color==='#1c1c1c'?'var(--text)':st.color)+'">'+st.label+'</div>'
       + (st.desc ? '<div style="font-size:.74rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">'+st.desc+'</div>' : '')
-      + (pending ? '<div style="font-size:.72rem;color:#B88A00;margin-bottom:8px;">Logged at home' + (c.earnedBy && c.earnedBy[st.id] ? ' by '+c.earnedBy[st.id] : '') + ' — confirm it if it is right.</div>'
+      + (on && !pending && c.earnedFrom && c.earnedFrom[st.id] ? '<div style="font-size:.68rem;color:var(--muted);margin-bottom:8px;">Logged in '+({profile:'the student profile',crm:'the CRM',classplan:'class plan'}[c.earnedFrom[st.id]]||c.earnedFrom[st.id])+(c.earnedBy&&c.earnedBy[st.id]?' · '+c.earnedBy[st.id]:'')+'</div>' : '')
+      + (pending ? '<div style="font-size:.72rem;color:#B88A00;margin-bottom:8px;">Logged in the student profile' + (c.earnedBy && c.earnedBy[st.id] ? ' — they say <b>'+c.earnedBy[st.id]+'</b> gave it' : '') + '. Confirm it if it is right.</div>'
         + '<button class="prog-log-btn" style="border-color:#2ecc71;color:#2ecc71;" onclick="verifyProgStripe(\''+st.id+'\')"><div class="prog-log-circle" style="border-color:#2ecc71;"></div><span>Verify this stripe</span></button>' : '')
       + '<button class="prog-log-btn '+(on?'logged':'')+'" onclick="toggleProgStripe(\''+st.id+'\')"><div class="prog-log-circle '+(on?'earned':'')+'">'+(on?'✓':'')+'</div><span>'+(pending?'Remove it':(on?'Earned — tap to remove':'Log this stripe'))+'</span></button>'
       + '</div>'; }).join('');
@@ -5141,7 +5145,7 @@ async function toggleProgStripe(key){
     c.earned.delete(key);
   } else {
     const awardedBy = await progAwarder();
-    const { error } = await sb.from('student_stripes').insert({ id: crypto.randomUUID(), student_id: c.id, belt: c.rank, stripe_key: key, earned_at: new Date().toISOString(), awarded_by: awardedBy, source: 'staff' });
+    const { error } = await sb.from('student_stripes').insert({ id: crypto.randomUUID(), student_id: c.id, belt: c.rank, stripe_key: key, earned_at: new Date().toISOString(), awarded_by: awardedBy, source: 'staff', origin: 'classplan' });
     if(error){ console.error('log error', error); return; }
     c.earned.set(key, 'staff');
   }
