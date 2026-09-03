@@ -5141,6 +5141,18 @@ function toggleProgStripePanel(id){
   if(!wasOpen) p.classList.add('open');
 }
 
+/* The 10-week cycle a stripe is being earned in, so rotating curriculum can
+   be reported on later (spec sections 7 and 10). Cached per page load. A
+   read failure returns null: the stripe still saves. */
+let _activeCycleId;
+async function activeCycleId(){
+  if(_activeCycleId !== undefined) return _activeCycleId;
+  try{
+    const r = await sb.from('cycle_data').select('id').eq('is_active', true).limit(1).maybeSingle();
+    _activeCycleId = (!r.error && r.data) ? r.data.id : null;
+  }catch(e){ _activeCycleId = null; }
+  return _activeCycleId;
+}
 async function toggleProgStripe(key){
   const c = _progCtx; if(!c) return;
   if(c.earned.has(key)){
@@ -5149,7 +5161,7 @@ async function toggleProgStripe(key){
     c.earned.delete(key);
   } else {
     const awardedBy = await progAwarder();
-    const { error } = await sb.from('student_stripes').insert({ id: crypto.randomUUID(), student_id: c.id, belt: c.rank, stripe_key: key, earned_at: new Date().toISOString(), awarded_by: awardedBy, source: 'staff', origin: 'classplan' });
+    const { error } = await sb.from('student_stripes').insert({ id: crypto.randomUUID(), student_id: c.id, belt: c.rank, stripe_key: key, earned_at: new Date().toISOString(), awarded_by: awardedBy, source: 'staff', origin: 'classplan', cycle_id: await activeCycleId() });
     if(error){ console.error('log error', error); return; }
     c.earned.set(key, 'staff');
   }
