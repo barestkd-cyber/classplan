@@ -742,7 +742,7 @@ body.light .hdr-tab.active { background: var(--red); }
     </div>
     <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <input id="newTemplateName" type="text" placeholder="Template name e.g. Schedule A" style="flex:1;min-width:140px;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:8px 10px;border-radius:3px;outline:none;">
-      <button class="btn btn-primary" onclick="createTemplate()" style="padding:8px 16px;">+ New</button>
+      <button class="btn btn-primary" onclick="createTemplate('newTemplateName')" style="padding:8px 16px;">+ New</button>
     </div>
     <div id="templateList" style="padding:12px 16px 32px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:70vh;"></div>
   </div>
@@ -821,10 +821,10 @@ body.light .hdr-tab.active { background: var(--red); }
     <div id="apanel-templates" style="display:none;">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);margin-bottom:14px;">Saved assignment templates. Apply any template to a week from the Schedule tab.</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-        <input id="newTemplateName" type="text" placeholder="Template name e.g. Schedule A" style="flex:1;min-width:140px;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:8px 10px;border-radius:3px;outline:none;">
-        <button class="btn btn-primary" onclick="createTemplate()" style="padding:8px 16px;">+ New</button>
+        <input id="newTemplateName-panel" type="text" placeholder="Template name e.g. Schedule A" style="flex:1;min-width:140px;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:8px 10px;border-radius:3px;outline:none;">
+        <button class="btn btn-primary" onclick="createTemplate('newTemplateName-panel')" style="padding:8px 16px;">+ New</button>
       </div>
-      <div id="templateList" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <div id="templateList-panel" style="display:flex;flex-direction:column;gap:12px;"></div>
     </div>
 
   </div>
@@ -3141,8 +3141,11 @@ function closeManageTemplates() {
   document.getElementById('manageTemplatesOverlay').classList.remove('open');
 }
 
-function createTemplate() {
-  const nameEl = document.getElementById('newTemplateName');
+// Each entry point names its own box. Both used to share one id, and
+// getElementById returned the modal's, so "+ New" in the admin panel read an
+// empty box and refused (audit A12).
+function createTemplate(inputId = 'newTemplateName') {
+  const nameEl = document.getElementById(inputId);
   const name = nameEl.value.trim();
   if (!name) { showToast('Enter a template name'); return; }
   // Start with current week's assignments as the base
@@ -3166,8 +3169,22 @@ function deleteTemplate(id) {
   showToast('Template deleted');
 }
 
+// Both surfaces show the same templates, so both are drawn every time -
+// otherwise whichever one was not open went stale.
 function renderTemplateList() {
-  const list = document.getElementById('templateList');
+  ['templateList', 'templateList-panel'].forEach(id => {
+    const list = document.getElementById(id);
+    if (list) renderTemplateListInto(list);
+  });
+}
+
+// Template names come from a text box and go into markup.
+function escTpl(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderTemplateListInto(list) {
   list.innerHTML = '';
   const DAYNAMES = ['Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -3211,7 +3228,7 @@ function renderTemplateList() {
 
     el.innerHTML = `
       <div style="background:var(--dark);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:.04em;">${tmpl.name}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:.04em;">${escTpl(tmpl.name)}</div>
         <button onclick="deleteTemplate(${tmpl.id})" style="background:none;border:1px solid var(--bl);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:2px;cursor:pointer;">Delete</button>
       </div>
       <div style="max-height:300px;overflow-y:auto;">${rowsHTML}</div>
