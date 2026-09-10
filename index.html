@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>BaresTKD Class Planner</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -4831,6 +4832,8 @@ async function doAuthSignup(){
   err.style.display='none';
   const { user, error } = await BTKD.signUp({ name, email, password: pw, confirm });
   if(error){err.textContent=error;err.style.display='block';return;}
+  // With email confirmation on, there is no session until the emailed link is clicked.
+  if(!(await BTKD.getSession())){ closeAuthModal(); showToast('Account created. Check your email to confirm it, then sign in.'); return; }
   currentUser=user; closeAuthModal(); await loadUserProfile();
   if(!cpIsStaff()){ showCpDenied(); return; }
 }
