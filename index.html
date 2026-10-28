@@ -219,6 +219,14 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 
 @media(max-width:680px){
   .plan-preview-col.open{display:block;position:fixed;inset:100px 0 0 0;z-index:200;overflow-y:auto;width:100%;border-left:none;}
+  /* On a phone the plan scrolls with the page. A fixed-height inner scroll
+     box fought the keyboard: opening it threw the page back to the top and
+     hid the box being typed in, because the phone can only lift what the
+     page itself scrolls. */
+  .plan-layout{height:auto;overflow:visible;}
+  .plan-edit-col{overflow:visible;}
+  .plan-top-bar{top:50px;}
+  .plan-edit-col textarea,.plan-edit-col input{scroll-margin-top:110px;scroll-margin-bottom:24px;}
 }
 
 .section{background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;overflow:hidden;}

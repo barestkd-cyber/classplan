@@ -72,4 +72,12 @@ test('a computer keeps its focus when switching tabs', () => {
   assert.strictEqual(p.field.blurred, false);
 });
 
+test('on a phone the plan scrolls with the page, so the keyboard can lift the box being typed in', () => {
+  const css = src.replace(/\r/g, '');
+  const phone = css.slice(css.indexOf('@media(max-width:680px){'), css.indexOf('}\n\n', css.indexOf('@media(max-width:680px){')));
+  assert.ok(phone.includes('.plan-layout{height:auto;overflow:visible;}'), 'no fixed-height scroll box on a phone');
+  assert.ok(phone.includes('.plan-edit-col{overflow:visible;}'));
+  assert.ok(phone.includes('.plan-top-bar{top:50px;}'), 'the plan title sits under the site header');
+});
+
 console.log('mobile: ' + passed + ' passed, ' + failed + ' failed');
