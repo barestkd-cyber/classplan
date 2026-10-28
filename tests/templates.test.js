@@ -42,11 +42,13 @@ function page() {
   const ctx = vm.createContext({
     document: { getElementById: id => els[id] || null, createElement: () => ({ style: {}, innerHTML: '' }) },
     templates: [], nextTemplateId: 1, currentWeekOffset: 0,
-    SCHEDULE_TEMPLATE: [{ day: 0, time: '17:00', label: 'Juniors', belt: '', defaultInstructor: 'Race' }],
-    INSTRUCTORS: ['', 'Race'], getPlanData: () => ({}), templateSlotKey: (d, t) => d + '|' + t,
+    SCHEDULE_TEMPLATE: [{ day: 0, time: '17:00', label: 'Juniors', belt: '', defaultInstructor: 'Chief', defaultInstructorId: 'u-race' }],
+    planners: [{ id: 'u-race', name: 'Race Bares', kind: 'admin' }],
+    getPlanData: () => ({}), templateSlotKey: (d, t) => d + '|' + t,
     progCssOf: () => '', showToast: m => toasts.push(m),
   });
-  vm.runInContext(['createTemplate', 'renderTemplateList', 'escTpl', 'renderTemplateListInto'].map(grab).join('\n'), ctx);
+  vm.runInContext(['createTemplate', 'renderTemplateList', 'escTpl', 'renderTemplateListInto',
+    'slotInstructor', 'instructorOptions', 'plannerName'].map(grab).join('\n'), ctx);
   return { els, ctx, toasts };
 }
 
@@ -64,6 +66,13 @@ test('"+ New" in the admin panel creates the template (the case that was broken)
   assert.strictEqual(ctx.templates[0].name, 'Schedule B');
   assert.ok(!toasts.includes('Enter a template name'), 'it read the wrong, empty box');
   assert.strictEqual(els['newTemplateName-panel'].value, '', 'and clears the box it read');
+});
+
+test('a template keeps the instructor account, not a name', () => {
+  const { els, ctx } = page();
+  els['newTemplateName'].value = 'Regulars';
+  vm.runInContext("createTemplate('newTemplateName')", ctx);
+  assert.strictEqual(ctx.templates[0].assignments['0|17:00'], 'u-race');
 });
 
 test('"+ New" in the modal still works', () => {

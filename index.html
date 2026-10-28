@@ -237,7 +237,11 @@ header{background:var(--grid-bg);border-bottom:2px solid var(--red);padding:0 14
 .field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer;}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--red);}
 .field textarea{resize:vertical;min-height:68px;line-height:1.55;}
+/* The segment dropdown has no background of its own, so without this its
+   open list drew light text on a white list in dark mode. */
+select option { background: var(--surface); color: var(--text); }
 body.light select option { background: #fff; color: #111; }
+body.light .ro-seg-desc { color: #444; }
 body.light .modal-sheet { background: var(--surface); }
 body.light .seg-block { background: var(--dark); }
 body.light .admin-panel { background: var(--black); }
@@ -692,6 +696,15 @@ body.light .hdr-tab.active { background: var(--red); }
           <option value="stretch">Stretching</option>
           <option value="cooldown">Cool-Down</option>
           <option value="other">Other</option>
+          <optgroup label="Kickboxing">
+            <option value="review">Review</option>
+            <option value="boxing">Boxing Combos</option>
+            <option value="kicks">Kick Combos</option>
+            <option value="handsfeet">Hands'n'Feet Combos</option>
+            <option value="newtech">New Techniques</option>
+            <option value="newcombo">New Combos</option>
+            <option value="thaipads">Thai Pads</option>
+          </optgroup>
         </select>
         <select id="libSegFilter" onchange="renderLibSegs()" style="flex:1;min-width:100px;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:7px 9px;border-radius:3px;outline:none;appearance:none;-webkit-appearance:none;">
           <option value="">All Instructors</option>
@@ -774,9 +787,12 @@ body.light .hdr-tab.active { background: var(--red); }
 
     <!-- ── ROSTER ── -->
     <div id="apanel-roster">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);margin-bottom:14px;">Active instructors and leaders. These populate all dropdowns across the planner.</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);margin-bottom:14px;">Instructors who plan classes. Add someone by the email they sign in to the curriculum app with. It opens the class planner and nothing else.</div>
       <div id="rosterList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
-      <button onclick="addRosterMember()" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:none;border:1px dashed var(--bl);color:var(--muted);padding:10px;border-radius:3px;cursor:pointer;width:100%;">+ Add Instructor / Leader</button>
+      <div style="display:flex;gap:8px;">
+        <input type="email" id="rosterAddEmail" placeholder="Their account email" autocomplete="off" style="flex:1;min-width:0;background:var(--black);border:1px solid var(--bl);color:var(--text);font-size:13px;padding:9px 10px;border-radius:3px;outline:none;">
+        <button onclick="addRosterMember()" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:none;border:1px dashed var(--bl);color:var(--muted);padding:10px 14px;border-radius:3px;cursor:pointer;flex-shrink:0;">+ Add Instructor</button>
+      </div>
     </div>
 
     <!-- ── SCHEDULE ── -->
@@ -888,12 +904,31 @@ body.light .hdr-tab.active { background: var(--red); }
 // ═══════════════════════════════
 // STATE
 // ═══════════════════════════════
-let isAdmin = true;
+let isAdmin = false;
 let currentWeekOffset = 0;
 let showingArchives = false;
 let segCount = 0;
 let clockInterval = null;
 let currentEntry = null;
+
+// Who is signed in, by account. A class belongs to an account id
+// (instructorId), never to a name: names are only for showing.
+let accountIsAdmin = false;   // the signed-in account is an admin
+let isPlannerAccount = false; // a class_planners row: plans classes, nothing else
+let myAccount = { id: null, name: '' };
+let viewAs = null;            // an admin previewing one instructor's view: { id, name }
+let planners = [];            // accounts that can plan, from class_planner_accounts() (admin only)
+function actingId() { return viewAs ? viewAs.id : myAccount.id; }
+function actingName() { return viewAs ? viewAs.name : (isAdmin ? 'Chief' : myAccount.name); }
+function isMine(entry) { return !!(entry && entry.instructorId && entry.instructorId === actingId()); }
+// Who teaches a class in a given week: the week's own assignment if it has
+// one, otherwise the class's regular instructor from the schedule.
+function slotInstructor(pd, tmpl) {
+  if (pd && (pd.instructorId || pd.instructor)) return { id: pd.instructorId || null, name: pd.instructor || '' };
+  return { id: (tmpl && tmpl.defaultInstructorId) || null, name: (tmpl && tmpl.defaultInstructor) || '' };
+}
+function plannerName(p) { return p.kind === 'admin' ? 'Chief' : p.name; }
+function instructorOptions() { return planners.map(p => ({ id: p.id, name: plannerName(p) })); }
 
 // ═══════════════════════════════
 // SCHEDULE DATA
@@ -1134,7 +1169,8 @@ function buildGrid() {
       let stackTop = 0;
       dayMorning.forEach(tmpl => {
         const pd = getPlanData(currentWeekOffset, d, tmpl.time);
-        const instructor = pd.instructor || tmpl.defaultInstructor;
+        const who = slotInstructor(pd, tmpl);
+        const instructor = who.name;
         const status = pd.status;
         const isUnassigned = !instructor && status === 'none';
         const pillH = Math.max(28, Math.round((tmpl.duration || 45) * PX_PER_MIN) - 2);
@@ -1148,7 +1184,7 @@ function buildGrid() {
         pill.innerHTML = '<div class="cell-time">' + fmtTimeAMPM(tmpl.timeH,tmpl.timeM) + '</div>' +
           '<div class="cell-program ' + progCssOf(tmpl) + '">' + tmpl.label + '</div>' +
           beltDiv + instrDiv;
-        const entry = {...tmpl, ...pd, instructor, weekOffset: currentWeekOffset};
+        const entry = {...tmpl, ...pd, instructor, instructorId: who.id, weekOffset: currentWeekOffset};
         pill.addEventListener('click', () => openCellModal(entry));
         strip.appendChild(pill);
         stackTop += pillH + 2;
@@ -1173,7 +1209,8 @@ function buildGrid() {
 
     dayClasses.forEach((tmpl, idx) => {
       const pd = getPlanData(currentWeekOffset, d, tmpl.time);
-      const instructor = pd.instructor || tmpl.defaultInstructor;
+      const who = slotInstructor(pd, tmpl);
+      const instructor = who.name;
       const status = pd.status;
       const isUnassigned = !instructor && status === 'none';
 
@@ -1201,7 +1238,7 @@ function buildGrid() {
         '<div class="cell-program ' + progCssOf(tmpl) + '">' + tmpl.label + '</div>' +
         beltDiv + instrDiv;
 
-      const entry = {...tmpl, ...pd, instructor, weekOffset: currentWeekOffset};
+      const entry = {...tmpl, ...pd, instructor, instructorId: who.id, weekOffset: currentWeekOffset};
       cell.addEventListener('click', () => openCellModal(entry));
       body.appendChild(cell);
     });
@@ -1271,7 +1308,7 @@ function openCellModal(entry) {
     const wk = entry.weekOffset !== undefined ? entry.weekOffset : currentWeekOffset;
     const sk = slotKey(wk, entry.day, entry.time);
     const chiefNote = (planData[sk] && planData[sk].chiefNote) || '';
-    const isOwnPlan = entry.instructor === document.getElementById('userChip').textContent;
+    const isOwnPlan = isMine(entry);
 
     const notesSection = document.createElement('div');
     notesSection.className = 'ro-admin';
@@ -1399,7 +1436,7 @@ function openCellModal(entry) {
     }
 
     // Edit Plan Structure button
-    const canEdit = isAdmin || entry.instructor === document.getElementById('userChip').textContent;
+    const canEdit = isAdmin || isMine(entry);
     if (canEdit) {
       const editBtn = document.createElement('button');
       editBtn.className = 'btn btn-ghost';
@@ -1412,7 +1449,7 @@ function openCellModal(entry) {
     // NO PLAN
     body.innerHTML = `<p style="font-size:13px;color:var(--muted);padding:16px 0 8px;">No plan submitted yet for this class.</p>`;
 
-    const canPlan = isAdmin || entry.instructor === document.getElementById('userChip').textContent;
+    const canPlan = isAdmin || isMine(entry);
     if (canPlan) {
       const planBtn = document.createElement('button');
       planBtn.className = 'btn btn-primary';
@@ -1650,7 +1687,7 @@ function openPlanEntry(entry) {
     }
 
     const chiefNote = (pd && pd.chiefNote) || '';
-    const isOwnPlan = entry.instructor === document.getElementById('userChip').textContent;
+    const isOwnPlan = isMine(entry);
 
     // Plan entry: Chief always sees notes section. Instructors never see it here.
     // (They see it in run view after Chief writes something.)
@@ -1745,7 +1782,7 @@ function openBlankPlan() {
   currentEntry = null;
   document.getElementById('planTopTitle').textContent = 'Blank Plan';
   const authorLbl = document.getElementById('planAuthorLabel');
-  authorLbl.textContent = isAdmin ? "Chief's Plan" : (document.getElementById('userChip').textContent + "'s Plan");
+  authorLbl.textContent = isAdmin ? "Chief's Plan" : (actingName() + "'s Plan");
   authorLbl.style.color = isAdmin ? 'var(--gold)' : 'var(--muted)';
   document.getElementById('pSlot').value = '';
   document.getElementById('pDuration').value = '45';
@@ -1783,22 +1820,36 @@ function toggleLightMode() {
     if (btn) btn.textContent = '🌙';
   }
 })();
+// An admin account can preview the planner as one instructor account sees it.
 function toggleRole() {
+  if (!accountIsAdmin) return;
   const chip = document.getElementById('userChip');
   if (isAdmin) {
-    const instructors = rosterData.filter(m => m.status === 'active' && m.name !== 'Chief');
-    if (instructors.length === 0) { showToast('No instructors in roster yet'); return; }
-    const names = instructors.map(m => m.name);
-    const picked = names.length === 1 ? names[0] : window.prompt('View as which instructor?\n' + names.join(', '));
-    if (!picked || !names.includes(picked)) return;
+    const choices = planners.filter(p => p.kind !== 'admin');
+    if (choices.length === 0) { showToast('No instructors yet. Add them in Admin, Roster'); return; }
+    const picked = choices.length === 1 ? choices[0]
+      : choices[parseInt(window.prompt('View as which instructor? Enter the number.\n' +
+          choices.map((p, i) => (i + 1) + '. ' + p.name).join('\n')), 10) - 1];
+    if (!picked) return;
+    viewAs = { id: picked.id, name: picked.name };
     isAdmin = false;
-    chip.textContent = picked;
+    chip.textContent = picked.name.split(' ')[0];
   } else {
+    viewAs = null;
     isAdmin = true;
     chip.textContent = 'Chief';
   }
+  syncRoleChrome();
+  if (document.getElementById('screen-cycle').classList.contains('active')) renderCycle();
+  buildGrid();
+}
+
+// Header controls follow the account: only an admin account sees Admin, and
+// an admin previewing an instructor sees what that instructor sees.
+function syncRoleChrome() {
   const adminBtn = document.getElementById('adminBtn');
   if (adminBtn) {
+    adminBtn.style.display = accountIsAdmin ? '' : 'none';
     adminBtn.style.borderColor = isAdmin ? 'var(--gold)' : 'var(--border)';
     adminBtn.style.color = isAdmin ? 'var(--gold)' : 'var(--muted)';
   }
@@ -1807,8 +1858,13 @@ function toggleRole() {
     myTab.textContent = isAdmin ? 'Instructors' : 'My Classes';
     myTab.onclick = isAdmin ? () => showMainScreen('instructors') : () => showMainScreen('myclasses');
   }
-  if (document.getElementById('screen-cycle').classList.contains('active')) renderCycle();
-  buildGrid();
+  // A planner-only account cannot read cycles, stripes or the student
+  // roster, so those staff tabs stay hidden for it.
+  const staffTabs = accountIsAdmin || currentRole === 'instructor';
+  ['tab-cycle', 'tab-compass', 'tab-progress'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = staffTabs ? '' : 'none';
+  });
 }
 
 
@@ -1829,14 +1885,39 @@ const CATS = [
   {v:'cooldown',l:'Cool-Down / Closing',css:'cat-cooldown', ph:'Stretch, meditation, student recognition, announcements.'},
   {v:'other',   l:'Other',              css:'cat-other',    ph:'Describe what this segment is and what you\'re doing.'},
 ];
-function getCat(v){return CATS.find(c=>c.v===v)||CATS[CATS.length-1];}
+// Kickboxing classes plan with their own segment types (Race, 2026-10-28).
+// Stretching, warm up, cool down and bag work keep the shared keys, so the
+// library's category filter treats them the same in every program.
+const KB_CATS = [
+  {v:'stretch',   l:'Stretching',          css:'cat-stretch',  ph:'Which stretches, and how long each?'},
+  {v:'review',    l:'Review',              css:'cat-games',    ph:'What from last class are you reviewing, and how?'},
+  {v:'warmup',    l:'Warm Up',             css:'cat-warmup',   ph:'Describe the warm-up: movements, rounds, time.'},
+  {v:'boxing',    l:'Boxing Combos',       css:'cat-sparring', ph:'List each combo. Rounds and round length.'},
+  {v:'kicks',     l:'Kick Combos',         css:'cat-basics',   ph:'List each kick combo. Rounds and round length.'},
+  {v:'handsfeet', l:"Hands'n'Feet Combos", css:'cat-partner',  ph:'List each combo of punches and kicks. Rounds and round length.'},
+  {v:'newtech',   l:'New Techniques',      css:'cat-selfdef',  ph:'Which technique, and how will you break it down?'},
+  {v:'newcombo',  l:'New Combos',          css:'cat-forms',    ph:'The new combo step by step, and how you will drill it.'},
+  {v:'cooldown',  l:'Cool Down',           css:'cat-cooldown', ph:'Stretch, breathing, announcements.'},
+  {v:'bags',      l:'Bag Work',            css:'cat-bags',     ph:'List each drill with its time, e.g. 3 rounds of 2 min.'},
+  {v:'thaipads',  l:'Thai Pads',           css:'cat-breaking', ph:'Pad drills, who holds, round length, rotations.'},
+];
+// The segment types for the class being planned.
+function segCats() {
+  const e = currentEntry;
+  const kickboxing = !!e && (e.program === 'Kickboxing' || /kickbox/i.test(String(e.label || '')));
+  return kickboxing ? KB_CATS : CATS;
+}
+function getCat(v){return segCats().find(c=>c.v===v)||CATS.find(c=>c.v===v)||CATS[CATS.length-1];}
 
 function addSeg(mins='',cat='',desc='',videoUrl=''){
   segCount++;
   const id='seg-'+segCount;
   const el=document.createElement('div');
   el.className='seg-block';el.id=id;
-  const opts=CATS.map(c=>`<option value="${c.v}"${cat===c.v?' selected':''}>${c.l}</option>`).join('');
+  // A saved segment whose type is not in this class's list still shows it.
+  const catList=segCats();
+  const cats=(cat&&!catList.some(c=>c.v===cat))?catList.concat([getCat(cat)]):catList;
+  const opts=cats.map(c=>`<option value="${c.v}"${cat===c.v?' selected':''}>${c.l}</option>`).join('');
   el.innerHTML=`
     <div class="seg-top">
       <div class="seg-mins">
@@ -1954,11 +2035,22 @@ function collectPlanData() {
   return { focus, segs, focusVideoUrl };
 }
 
+// A week that follows the class's regular instructor has no assignment of
+// its own. Saving a plan writes that instructor's account onto the week, so
+// the row carries their id and the database lets them save it.
+function claimInheritedWeek(pd) {
+  if (!pd.instructorId && !pd.instructor && currentEntry && currentEntry.instructorId) {
+    pd.instructorId = currentEntry.instructorId;
+    pd.instructor = currentEntry.instructor || '';
+  }
+}
+
 function saveDraft() {
   if (!document.getElementById('segsList').children.length) { showToast('Add at least one segment'); return; }
   if (currentEntry) {
     const key = slotKey(currentEntry.weekOffset !== undefined ? currentEntry.weekOffset : currentWeekOffset, currentEntry.day, currentEntry.time);
     if (!planData[key]) planData[key] = { status:'none', instructor:'', planId:null };
+    claimInheritedWeek(planData[key]);
     planData[key].status = isAdmin ? 'reviewed' : 'draft';
     planData[key].planId = key;
     planData[key].planContent = collectPlanData();
@@ -1973,6 +2065,7 @@ function submitPlan() {
   if (currentEntry) {
     const key = slotKey(currentEntry.weekOffset !== undefined ? currentEntry.weekOffset : currentWeekOffset, currentEntry.day, currentEntry.time);
     if (!planData[key]) planData[key] = { status:'none', instructor:'', planId:null };
+    claimInheritedWeek(planData[key]);
     const wasApproved = planData[key].status === 'reviewed';
     planData[key].status = isAdmin ? 'reviewed' : (wasApproved ? 'resubmitted' : 'submitted');
     planData[key].planId = key;
@@ -1999,12 +2092,12 @@ function submitPlan() {
 function renderMyClasses() {
   const list = document.getElementById('myClassesList');
   const heading = document.getElementById('myClassesHeading');
-  const me = isAdmin ? 'Chief' : document.getElementById('userChip').textContent;
+  const meId = actingId();
   list.innerHTML = '';
 
   const DAYNAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const WEEK_LABELS = ['This Week','Next Week','In 2 Weeks','In 3 Weeks'];
-  heading.textContent = `${me === 'Chief' ? 'Your' : me + "'s"} classes — all upcoming`;
+  heading.textContent = `${viewAs ? viewAs.name + "'s" : 'Your'} classes — all upcoming`;
 
   let totalFound = 0;
 
@@ -2012,9 +2105,9 @@ function renderMyClasses() {
     const weekSlots = [];
     SCHEDULE_TEMPLATE.forEach(tmpl => {
       const pd = getPlanData(w, tmpl.day, tmpl.time);
-      const instructor = pd.instructor || tmpl.defaultInstructor;
-      if (instructor === me) {
-        weekSlots.push({...tmpl, ...pd, instructor, weekOffset: w});
+      const who = slotInstructor(pd, tmpl);
+      if (who.id && who.id === meId) {
+        weekSlots.push({...tmpl, ...pd, instructor: who.name, instructorId: who.id, weekOffset: w});
       }
     });
     if (weekSlots.length === 0) continue;
@@ -2117,7 +2210,8 @@ function renderMyClasses() {
     let cycleHasClasses = false;
     cycle.weeks_data.forEach((week, wi) => {
       if (!week.classes || week.classes.length === 0) return;
-      const myPast = week.classes.filter(c => c.instructor === me);
+      // Weeks archived before accounts carry only a name.
+      const myPast = week.classes.filter(c => c.instructorId ? c.instructorId === meId : c.instructor === actingName());
       if (myPast.length === 0) return;
       cycleHasClasses = true;
       foundAny = true;
@@ -2225,7 +2319,7 @@ function renderInstructors() {
   for (let w = 0; w <= 3; w++) {
     SCHEDULE_TEMPLATE.slice().sort((a,b)=> a.day!==b.day ? a.day-b.day : (a.timeH*60+a.timeM)-(b.timeH*60+b.timeM)).forEach(tmpl => {
       const pd = getPlanData(w, tmpl.day, tmpl.time);
-      const instr = pd.instructor || tmpl.defaultInstructor;
+      const instr = slotInstructor(pd, tmpl).name;
       if (instr && !(instr in instrFirstAppearance)) {
         instrFirstAppearance[instr] = slotIndex;
       }
@@ -2259,11 +2353,12 @@ function renderInstructors() {
     const weekSlots = [];
     SCHEDULE_TEMPLATE.forEach(tmpl => {
       const pd = getPlanData(w, tmpl.day, tmpl.time);
-      const instructor = pd.instructor || tmpl.defaultInstructor || 'Unassigned';
+      const who = slotInstructor(pd, tmpl);
+      const instructor = who.name || 'Unassigned';
       const matchesInstr = instrFilter === '' || instructor === instrFilter;
       const matchesStatus = statusFilter === '' || pd.status === statusFilter;
       if (matchesInstr && matchesStatus) {
-        weekSlots.push({...tmpl, ...pd, instructor, weekOffset: w});
+        weekSlots.push({...tmpl, ...pd, instructor, instructorId: who.id, weekOffset: w});
       }
     });
     if (weekSlots.length === 0) continue;
@@ -2671,7 +2766,7 @@ function openReassignPanel() {
   const existing = document.getElementById('reassignPopup');
   if (existing) existing.remove();
 
-  const instructors = rosterData.filter(m => m.status === 'active').map(m => m.name);
+  const instructors = instructorOptions();
   const popup = document.createElement('div');
   popup.id = 'reassignPopup';
   popup.style.cssText = 'position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.75);';
@@ -2682,11 +2777,15 @@ function openReassignPanel() {
         <button onclick="document.getElementById('reassignPopup').remove()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
       </div>
       <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-        ${currentEntry.instructor ? '<div style="font-size:12px;color:var(--muted);">Currently: <strong style="color:#27ae60;">' + currentEntry.instructor + '</strong></div>' : ''}
+        ${currentEntry.instructor ? '<div style="font-size:12px;color:var(--muted);">Currently: <strong style="color:#27ae60;">' + escTpl(currentEntry.instructor) + '</strong></div>' : ''}
+        ${instructors.length ? '' : '<div style="font-size:12px;color:var(--muted);">No instructors yet. Add them in Admin, Roster.</div>'}
         <select id="reassignSelect" style="width:100%;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:9px 10px;border-radius:3px;outline:none;appearance:none;-webkit-appearance:none;">
           <option value="">Select instructor...</option>
-          ${instructors.map(n=>`<option value="${n}">${n}</option>`).join('')}
+          ${instructors.map(o=>`<option value="${o.id}">${escTpl(o.name)}</option>`).join('')}
         </select>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer;">
+          <input type="checkbox" id="reassignEveryWeek" checked> Every week (their regular class)
+        </label>
         <div id="reassignConfirmRow" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:3px;padding:10px 12px;">
           <div id="reassignConfirmMsg" style="font-size:12px;color:var(--text);margin-bottom:10px;"></div>
           <div style="display:flex;gap:8px;">
@@ -2705,21 +2804,22 @@ function openReassignPanel() {
 
 function confirmReassign() {
   const sel = document.getElementById('reassignSelect');
-  const newInstr = sel ? sel.value : '';
-  if (!newInstr) { showToast('Select an instructor first'); return; }
-  if (newInstr === currentEntry.instructor) { document.getElementById('reassignPopup').remove(); return; }
+  const newId = sel ? sel.value : '';
+  if (!newId) { showToast('Select an instructor first'); return; }
+  const acct = instructorOptions().find(o => o.id === newId);
+  if (!acct) return;
 
   const wk = currentEntry.weekOffset !== undefined ? currentEntry.weekOffset : currentWeekOffset;
   const key = slotKey(wk, currentEntry.day, currentEntry.time);
   const hasPlan = planData[key] && planData[key].planId;
-  const isFirstAssign = !currentEntry.instructor;
+  const isFirstAssign = !currentEntry.instructorId && !currentEntry.instructor;
 
-  if (hasPlan && !isFirstAssign) {
+  if (hasPlan && !isFirstAssign && newId !== currentEntry.instructorId) {
     // Show inline plan-handling confirmation
     document.getElementById('reassignConfirmBtn').style.display = 'none';
     document.getElementById('reassignSelect').disabled = true;
     const confirmRow = document.getElementById('reassignConfirmRow');
-    document.getElementById('reassignConfirmMsg').textContent = `Reassign to ${newInstr}? This class already has a plan from ${currentEntry.instructor}.`;
+    document.getElementById('reassignConfirmMsg').textContent = `Reassign to ${acct.name}? This class already has a plan from ${currentEntry.instructor}.`;
     confirmRow.style.display = 'block';
   } else {
     // No plan — just reassign directly
@@ -2727,14 +2827,37 @@ function confirmReassign() {
   }
 }
 
-function doReassign(wipePlan) {
+function scheduleSlotOf(entry) {
+  return SCHEDULE_TEMPLATE.find(t => t.day === entry.day && t.time === entry.time) || null;
+}
+
+// The class's regular instructor, by account, for every week that has no
+// assignment of its own. Saved straight to the shared schedule.
+async function setRegularInstructor(tmpl, acct) {
+  const { error } = await sb.from('schedule_template')
+    .update({ default_instructor_id: acct ? acct.id : null, default_instructor: acct ? acct.name : '' })
+    .eq('day', tmpl.day).eq('time', tmpl.time);
+  if (error) { console.error('regular instructor', error); showToast('Not saved: ' + error.message); return false; }
+  tmpl.defaultInstructorId = acct ? acct.id : null;
+  tmpl.defaultInstructor = acct ? acct.name : '';
+  return true;
+}
+
+async function doReassign(wipePlan) {
   const sel = document.getElementById('reassignSelect');
-  const newInstr = sel ? sel.value : '';
-  if (!newInstr) return;
+  const newId = sel ? sel.value : '';
+  const acct = instructorOptions().find(o => o.id === newId);
+  if (!acct) return;
+  const everyWeek = !!(document.getElementById('reassignEveryWeek') || {}).checked;
 
   const wk = currentEntry.weekOffset !== undefined ? currentEntry.weekOffset : currentWeekOffset;
   const key = slotKey(wk, currentEntry.day, currentEntry.time);
   if (!planData[key]) planData[key] = {status:'none', instructor:'', planId:null};
+
+  if (everyWeek) {
+    const tmpl = scheduleSlotOf(currentEntry);
+    if (tmpl && !(await setRegularInstructor(tmpl, acct))) return;
+  }
 
   if (wipePlan) {
     planData[key].planId = null;
@@ -2742,23 +2865,37 @@ function doReassign(wipePlan) {
     planData[key].status = 'none';
   }
 
-  planData[key].instructor = newInstr;
-  currentEntry.instructor = newInstr;
+  planData[key].instructorId = acct.id;
+  planData[key].instructor = acct.name;
+  currentEntry.instructorId = acct.id;
+  currentEntry.instructor = acct.name;
   saveSlot(key);
 
   document.getElementById('reassignPopup').remove();
   buildGrid();
-  showToast(`Reassigned to ${newInstr}`);
+  showToast(everyWeek ? `${acct.name} teaches this class every week` : `${acct.name} teaches this class this week`);
   openCellModal(currentEntry);
 }
 
 function doUnassign(btn) {
-  inlineConfirm(btn, 'Unassign the instructor from this class? The plan stays.', () => {
+  const tmpl = scheduleSlotOf(currentEntry);
+  const isRegular = !!(tmpl && tmpl.defaultInstructorId && tmpl.defaultInstructorId === currentEntry.instructorId);
+  // inlineConfirm draws its message as markup, and names come from accounts.
+  const who = escTpl(currentEntry.instructor);
+  const msg = isRegular
+    ? `Unassign ${who} from this class every week? Plans stay.`
+    : (tmpl && tmpl.defaultInstructor)
+      ? `Take ${who} off this week? ${escTpl(tmpl.defaultInstructor)}, the regular instructor, has it again.`
+      : 'Unassign the instructor from this week? The plan stays.';
+  inlineConfirm(btn, msg, async () => {
+    if (isRegular && !(await setRegularInstructor(tmpl, null))) return;
     const wk = currentEntry.weekOffset !== undefined ? currentEntry.weekOffset : currentWeekOffset;
     const key = slotKey(wk, currentEntry.day, currentEntry.time);
     if (!planData[key]) planData[key] = {status:'none', instructor:'', planId:null};
     planData[key].instructor = '';
+    planData[key].instructorId = null;
     currentEntry.instructor = '';
+    currentEntry.instructorId = null;
     saveSlot(key);
     const popup = document.getElementById('reassignPopup');
     if (popup) popup.remove();
@@ -3051,9 +3188,7 @@ function getCatProgCss(label) {
 }
 
 // ═══════════════════════════════
-const INSTRUCTORS = ['Chief'];
-
-// Template = { id, name, assignments: { 'day-time': instructorName } }
+// Template = { id, name, assignments: { 'day-time': instructor account id } }
 let templates = [
   {
     id: 1, name: 'Schedule A',
@@ -3123,9 +3258,12 @@ function applyTemplate(id) {
 
   SCHEDULE_TEMPLATE.forEach(slot => {
     const sk = slotKey(currentWeekOffset, slot.day, slot.time);
-    const instrFromTemplate = tmpl.assignments[templateSlotKey(slot.day, slot.time)] ?? slot.defaultInstructor;
+    const id = tmpl.assignments[templateSlotKey(slot.day, slot.time)] ?? (slot.defaultInstructorId || '');
+    const acct = instructorOptions().find(o => o.id === id);
     if (!planData[sk]) planData[sk] = {status:'none', instructor:'', planId:null};
-    planData[sk].instructor = instrFromTemplate;
+    planData[sk].instructorId = acct ? acct.id : null;
+    planData[sk].instructor = acct ? acct.name : '';
+    saveSlot(sk);
   });
 
   closeApplyTemplate();
@@ -3153,7 +3291,7 @@ function createTemplate(inputId = 'newTemplateName') {
   const assignments = {};
   SCHEDULE_TEMPLATE.forEach(slot => {
     const pd = getPlanData(currentWeekOffset, slot.day, slot.time);
-    assignments[templateSlotKey(slot.day, slot.time)] = pd.instructor || slot.defaultInstructor || '';
+    assignments[templateSlotKey(slot.day, slot.time)] = slotInstructor(pd, slot).id || '';
   });
   templates.push({id: nextTemplateId++, name, assignments});
   nameEl.value = '';
@@ -3215,7 +3353,7 @@ function renderTemplateListInto(list) {
           </div>
           <select onchange="updateTemplateAssignment(${tmpl.id},'${templateSlotKey(parseInt(day),s.time)}',this.value)"
             style="background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 6px;border-radius:2px;outline:none;appearance:none;-webkit-appearance:none;max-width:100px;">
-            ${INSTRUCTORS.map(i=>`<option value="${i}"${i===s.instr?' selected':''}>${i||'Unassigned'}</option>`).join('')}
+            ${[{ id: '', name: 'Unassigned' }].concat(instructorOptions()).map(o=>`<option value="${o.id}"${o.id===s.instr?' selected':''}>${escTpl(o.name)}</option>`).join('')}
           </select>
         </div>
       `).join('');
@@ -3268,9 +3406,9 @@ function postMessage() {
   const tag = document.getElementById('boardTag').value;
   const text = ta.value.trim();
   if (!text) { showToast('Write something first'); return; }
-  const author = isAdmin ? 'Chief' : document.getElementById('userChip').textContent;
+  const author = actingName();
   boardMessages.unshift({
-    id: nextMsgId++, author, tag, timestamp: new Date(),
+    id: nextMsgId++, author, authorId: actingId(), tag, timestamp: new Date(),
     text, replies: []
   });
   ta.value = '';
@@ -3283,10 +3421,10 @@ function postReply(msgId) {
   const input = document.getElementById('reply-input-'+msgId);
   const text = input.value.trim();
   if (!text) return;
-  const author = isAdmin ? 'Chief' : document.getElementById('userChip').textContent;
+  const author = actingName();
   const msg = boardMessages.find(m=>m.id===msgId);
   if (msg) {
-    msg.replies.push({author, timestamp: new Date(), text});
+    msg.replies.push({author, authorId: actingId(), timestamp: new Date(), text});
     input.value='';
     renderFeed();
     checkBoardDot();
@@ -3312,7 +3450,7 @@ function renderFeed() {
   boardMessages.forEach(msg => {
     const ts = TAG_STYLES[msg.tag] || TAG_STYLES.general;
     const isChief = msg.author === 'Chief';
-    const canDelete = isAdmin || msg.author === document.getElementById('userChip').textContent;
+    const canDelete = isAdmin || (!!msg.authorId && msg.authorId === actingId());
 
     const isNew = msg.timestamp > lastBoardVisit;
     const hasNewReply = msg.replies.some(r => r.timestamp > lastBoardVisit);
@@ -3467,13 +3605,14 @@ function showLibTab(tab) {
 }
 
 function renderLibrary() {
-  const me = isAdmin ? 'Chief' : document.getElementById('userChip').textContent;
+  const me = actingName();
+  const meId = actingId();
   // Sync instructor dropdown from roster
   const planSel = document.getElementById('libPlanFilter');
   const curVal = planSel ? planSel.value : '';
   if (planSel) {
     planSel.innerHTML = '<option value="">All Instructors</option>' +
-      rosterData.filter(m=>m.status==='active').map(m=>`<option value="${m.name}"${curVal===m.name?' selected':''}>${m.name}</option>`).join('');
+      instructorOptions().map(o=>`<option value="${escTpl(o.name)}"${curVal===o.name?' selected':''}>${escTpl(o.name)}</option>`).join('');
   }
   const filter = planSel ? planSel.value : '';
   const list = document.getElementById('libPlansList');
@@ -3481,7 +3620,7 @@ function renderLibrary() {
 
   let plans = [...libraryPlans].sort((a,b) => b.createdAt - a.createdAt);
   const filterInstr = filter;
-  plans = plans.filter(p => p.shared || p.creator === me);
+  plans = plans.filter(p => p.shared || p.creatorId === meId);
   if (filterInstr) plans = plans.filter(p => p.creator === filterInstr);
 
   if (plans.length===0) {
@@ -3490,7 +3629,7 @@ function renderLibrary() {
   }
 
   plans.forEach(plan => {
-    const isMine = plan.creator === me;
+    const isMine = plan.creatorId === meId;
     const card = document.createElement('div');
     card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:4px;padding:13px 14px;';
     const lastUsed = plan.usedOn.length ? `Last used ${formatDate(plan.usedOn[plan.usedOn.length-1])} · ${plan.usedOn.length}x` : 'Never used';
@@ -3522,17 +3661,18 @@ function renderLibSegs() {
   const curVal = segSel ? segSel.value : '';
   if (segSel) {
     segSel.innerHTML = '<option value="">All Instructors</option>' +
-      rosterData.filter(m=>m.status==='active').map(m=>`<option value="${m.name}"${curVal===m.name?' selected':''}>${m.name}</option>`).join('');
+      instructorOptions().map(o=>`<option value="${escTpl(o.name)}"${curVal===o.name?' selected':''}>${escTpl(o.name)}</option>`).join('');
   }
 
   const catFilter = document.getElementById('libSegCat').value;
   const instrFilter = segSel ? segSel.value : '';
-  const me = isAdmin ? 'Chief' : document.getElementById('userChip').textContent;
+  const me = actingName();
+  const meId = actingId();
 
   let segs = [...librarySegs].sort((a,b) => b.createdAt - a.createdAt);
   if (catFilter) segs = segs.filter(s=>s.cat===catFilter);
   // Show private segs only to their creator
-  segs = segs.filter(s => s.shared || s.creator === me);
+  segs = segs.filter(s => s.shared || s.creatorId === meId);
   if (instrFilter) segs = segs.filter(s=>s.creator===instrFilter);
 
   if (segs.length===0) {
@@ -3540,10 +3680,11 @@ function renderLibSegs() {
     return;
   }
 
-  const CAT_LABELS_MAP = {warmup:'Warm-Up',stretch:'Stretching',basics:'Basics',forms:'Forms',sparring:'Sparring',bags:'Bag Work',partner:'Partner Drills',selfdef:'Self-Defense',cooldown:'Cool-Down',other:'Other'};
+  const CAT_LABELS_MAP = {warmup:'Warm-Up',stretch:'Stretching',basics:'Basics',forms:'Forms',sparring:'Sparring',bags:'Bag Work',partner:'Partner Drills',selfdef:'Self-Defense',cooldown:'Cool-Down',other:'Other',
+    review:'Review',boxing:'Boxing Combos',kicks:'Kick Combos',handsfeet:"Hands'n'Feet Combos",newtech:'New Techniques',newcombo:'New Combos',thaipads:'Thai Pads'};
 
   segs.forEach(seg => {
-    const isMine = seg.creator === me;
+    const isMine = seg.creatorId === meId;
     const card = document.createElement('div');
     card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px 14px;';
     const lastUsed = seg.usedOn.length ? `${seg.usedOn.length}x used` : 'Never used';
@@ -3590,10 +3731,10 @@ function viewLibPlan(id) {
   const fakeEntry = {
     label:plan.name, belt:'', progCss:'prog-juniors',
     day:0, time:'', timeH:16, timeM:0,
-    instructor:plan.creator, duration:plan.planContent.segs.reduce((a,s)=>a+s.mins,0),
+    instructor:plan.creator, instructorId:plan.creatorId || null, duration:plan.planContent.segs.reduce((a,s)=>a+s.mins,0),
     status:'reviewed', planId:'lib-'+plan.id, weekOffset:0, isArchived:true
   };
-  planData['lib-'+plan.id] = { status:'reviewed', instructor:plan.creator, planId:'lib-'+plan.id, planContent:plan.planContent };
+  planData['lib-'+plan.id] = { status:'reviewed', instructor:plan.creator, instructorId:plan.creatorId || null, planId:'lib-'+plan.id, planContent:plan.planContent };
   currentEntry = fakeEntry;
   openCellModal(fakeEntry);
 }
@@ -3724,7 +3865,8 @@ function confirmSaveToLibrary() {
   if (!name) { showToast('Enter a name'); return; }
 
   const {pd, libBtn} = _libSaveContext;
-  const me = isAdmin ? 'Chief' : document.getElementById('userChip').textContent;
+  const me = actingName();
+  const meId = actingId();
   const content = pd ? pd.planContent : collectPlanData();
 
   if (!content || !content.segs || content.segs.length === 0) {
@@ -3735,7 +3877,7 @@ function confirmSaveToLibrary() {
 
   libraryPlans.unshift({
     id: 'lib-' + Date.now(),
-    name, creator: me, shared: false,
+    name, creator: me, creatorId: meId, shared: false,
     createdAt: new Date(), usedOn: [],
     planContent: content
   });
@@ -3751,10 +3893,6 @@ function saveToLibrary() {
 }
 const DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-let rosterData = [
-  {id:'r-1', name:'Chief', rank:'Master', contact:'', status:'active'},
-];
-let nextRosterId = 7;
 
 // ── PROGRAMS ──
 function applyProgColors() {
@@ -3820,17 +3958,10 @@ function showAdminTab(name) {
 }
 
 function openAdminPanel() {
-  if (!isAdmin) {
-    const pin = window.prompt('Enter admin PIN:');
-    if (pin === null) return;
-    if (pin !== '1234') { showToast('Incorrect PIN'); return; }
-    isAdmin = true;
-    document.getElementById('userChip').textContent = 'Chief';
-    const adminBtn = document.getElementById('adminBtn');
-    if (adminBtn) { adminBtn.style.borderColor='var(--gold)'; adminBtn.style.color='var(--gold)'; }
-    const myTab = document.getElementById('tab-myclasses');
-    if (myTab) { myTab.textContent='Instructors'; myTab.onclick=()=>showMainScreen('instructors'); }
-  }
+  // Admin comes from the account, never a PIN. An admin previewing an
+  // instructor's view returns to their own first.
+  if (!accountIsAdmin) return;
+  if (!isAdmin) toggleRole();
   showAdminTab('roster');
   document.getElementById('adminPanel').style.display = 'block';
   pushNav();
@@ -3840,44 +3971,58 @@ function closeAdminPanel() {
   document.getElementById('adminPanel').style.display = 'none';
 }
 
-// ── ROSTER ──
+// ── ROSTER: the accounts that can plan classes ──
+// Saved in the database (class_planners), so it is the same list every time
+// the planner opens. Adding someone never changes their role.
+async function loadPlanners() {
+  planners = [];
+  if (!accountIsAdmin) return;
+  const { data, error } = await sb.rpc('class_planner_accounts');
+  if (error) { console.error('class_planner_accounts', error); showToast('Could not load instructors'); return; }
+  planners = data || [];
+}
+
 function renderRoster() {
   const list = document.getElementById('rosterList');
   list.innerHTML = '';
-  rosterData.forEach((m,i) => {
+  if (!planners.length) list.innerHTML = '<p style="font-size:13px;color:var(--muted);">No instructors yet.</p>';
+  planners.forEach(p => {
     const row = document.createElement('div');
     row.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 13px;display:flex;align-items:center;gap:10px;';
+    const what = p.kind === 'admin' ? 'Admin' : p.kind === 'instructor' ? 'Staff' : 'Plans classes';
     row.innerHTML = `
       <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap;">
-          <input type="text" value="${m.name}" onchange="rosterData[${i}].name=this.value" style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;background:none;border:none;border-bottom:1px solid var(--faint);color:var(--text);outline:none;width:100px;padding:2px 0;">
-          <input type="text" value="${m.rank}" onchange="rosterData[${i}].rank=this.value" placeholder="Rank" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;background:none;border:none;border-bottom:1px solid var(--faint);color:var(--muted);outline:none;width:130px;padding:2px 0;">
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <input type="text" value="${m.contact}" onchange="rosterData[${i}].contact=this.value" placeholder="Contact / notes" style="font-size:11px;background:none;border:none;border-bottom:1px solid var(--faint);color:var(--muted);outline:none;flex:1;min-width:100px;padding:2px 0;font-family:'Barlow',sans-serif;">
-          <select onchange="rosterData[${i}].status=this.value" style="background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 6px;border-radius:2px;outline:none;appearance:none;-webkit-appearance:none;">
-            <option${m.status==='active'?' selected':''} value="active">Active</option>
-            <option${m.status==='inactive'?' selected':''} value="inactive">Inactive</option>
-          </select>
-        </div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;">${escTpl(p.name)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere;">${escTpl(p.email || '')} · ${what}</div>
       </div>
-      <button onclick="removeRosterMember(${m.id})" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 8px;border-radius:3px;cursor:pointer;font-size:12px;flex-shrink:0;">✕</button>
+      ${p.kind === 'planner' ? `<button onclick="removeRosterMember('${p.id}', this)" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 8px;border-radius:3px;cursor:pointer;font-size:12px;flex-shrink:0;">✕</button>` : ''}
     `;
     list.appendChild(row);
   });
 }
 
-function addRosterMember() {
-  rosterData.push({id:nextRosterId++,name:'New',rank:'',contact:'',status:'active'});
+async function addRosterMember() {
+  const input = document.getElementById('rosterAddEmail');
+  const email = ((input && input.value) || '').trim();
+  if (!email) { showToast('Enter the email they sign in with'); return; }
+  const { data, error } = await sb.rpc('set_class_planner', { p_email: email, p_on: true });
+  if (error) { showToast('Not added: ' + error.message); return; }
+  if (data && data.ok === false) { showToast(data.error); return; }
+  input.value = '';
+  await loadPlanners();
   renderRoster();
+  showToast('Added. They sign in with their curriculum app login.');
 }
 
 function removeRosterMember(id, btn) {
-  const member = rosterData.find(m=>m.id===id);
+  const member = planners.find(p => p.id === id);
   if (!member) return;
-  inlineConfirm(btn, 'Remove ' + member.name + ' from the roster?', () => {
-    rosterData = rosterData.filter(m=>m.id!==id);
+  inlineConfirm(btn, 'Stop ' + escTpl(member.name) + ' planning classes? Their classes stay assigned.', async () => {
+    const { data, error } = await sb.rpc('set_class_planner', { p_email: member.email, p_on: false });
+    if (error || (data && data.ok === false)) { showToast('Not removed: ' + (error ? error.message : data.error)); return; }
+    await loadPlanners();
     renderRoster();
+    showToast(member.name + ' removed');
   });
 }
 
@@ -3899,17 +4044,17 @@ function renderHours() {
   const curVal = sel ? sel.value : '';
   if (sel) {
     sel.innerHTML = '<option value="">All Instructors</option>' +
-      rosterData.filter(m=>m.status==='active').map(m=>`<option value="${m.name}"${curVal===m.name?' selected':''}>${m.name}</option>`).join('');
+      instructorOptions().map(o=>`<option value="${escTpl(o.name)}"${curVal===o.name?' selected':''}>${escTpl(o.name)}</option>`).join('');
   }
 
   table.innerHTML = '';
 
   const hours = {};
-  rosterData.filter(m=>m.status==='active').forEach(m => { hours[m.name] = {class:0, leadership:0}; });
+  instructorOptions().forEach(o => { hours[o.name] = {class:0, leadership:0}; });
 
   SCHEDULE_TEMPLATE.forEach(slot => {
     const pd = getPlanData(0, slot.day, slot.time);
-    const instr = pd.instructor || slot.defaultInstructor;
+    const instr = slotInstructor(pd, slot).name;
     if (instr && hours[instr] !== undefined) hours[instr].class += (slot.duration||45)/60;
   });
 
@@ -4272,9 +4417,15 @@ async function saveCycleToSupabase(cycle, isActive) {
 
 async function loadCycleFromSupabase() {
   const { data, error } = await sb.from('cycle_data').select('*').order('updated_at', { ascending: false });
-  if(error){ console.error('cycle_data load', error); showToast('Cycle load failed — working from local defaults'); return; }
-  if(!data || !data.length) return;
+  if(error){ console.error('cycle_data load', error); showToast('Cycle load failed — working from local defaults'); }
+  // A planner-only account cannot read cycles and gets none back. Its class
+  // plans must still load, so the week load below always runs.
+  else if(data && data.length) applyCycleRows(data);
+  await loadAllVisibleWeeks();
+  buildGrid();
+}
 
+function applyCycleRows(data) {
   const active = data.find(c => c.is_active);
   if(active) {
     currentCycle.supabase_id = active.id;
@@ -4310,8 +4461,6 @@ async function loadCycleFromSupabase() {
       rotationHalf: c.rotation_half || '1'
     }));
   }
-  await loadAllVisibleWeeks();
-  buildGrid();
 }
 
 // ── Class plan persistence (overlay on the schedule template) ──
@@ -4330,14 +4479,18 @@ async function saveSlot(key){
     week_start: localYMD(getWeekStart(parsed.weekOffset)),
     day: parsed.day, time: parsed.time,
     label: tmpl.label || '', belt: tmpl.belt || '',
-    instructor: p.instructor || '', status: p.status || 'none',
+    instructor: p.instructor || '', instructor_id: p.instructorId || null, status: p.status || 'none',
     plan_id: p.planId || null, plan_content: p.planContent || null,
     chief_note: p.chiefNote || null, shared_with_students: !!p.sharedWithStudents,
     send_back_note: p.sendBackNote || null, resubmitted_at: p.resubmittedAt || null,
     updated_at: new Date().toISOString()
   };
   const { error } = await sb.from('class_plans').upsert(row, { onConflict: 'week_start,day,time' });
-  if(error) console.error('saveSlot failed', error);
+  if(error){
+    // The database only takes a plan from the account the class is assigned to.
+    console.error('saveSlot failed', error);
+    showToast(error.code === '42501' ? 'Not saved: this class is not assigned to you' : 'Not saved: ' + error.message);
+  }
 }
 
 async function deleteSlot(key){
@@ -4359,7 +4512,7 @@ async function loadAllVisibleWeeks(){
   (data||[]).forEach(r => {
     const off = dateToOffset[r.week_start]; if(off===undefined) return;
     planData[slotKey(off, r.day, r.time)] = {
-      status: r.status || 'none', instructor: r.instructor || '',
+      status: r.status || 'none', instructor: r.instructor || '', instructorId: r.instructor_id || null,
       planId: r.plan_id || null, planContent: r.plan_content || null,
       chiefNote: r.chief_note || '', sharedWithStudents: !!r.shared_with_students,
       sendBackNote: r.send_back_note || '', resubmittedAt: r.resubmitted_at || null
@@ -4608,7 +4761,7 @@ function saveScheduleEdits() {
 async function hydrateScheduleTemplate(){
   try {
     const { data, error } = await sb.from('schedule_template')
-      .select('day,time,time_h,time_m,label,belt,prog_css,default_instructor,duration,program,divisions');
+      .select('day,time,time_h,time_m,label,belt,prog_css,default_instructor,default_instructor_id,duration,program,divisions');
     if (error || !data || !data.length) {
       if (error) console.warn('[classplan] schedule hydrate failed, using baked-in copy:', error.message);
       return;
@@ -4620,7 +4773,8 @@ async function hydrateScheduleTemplate(){
         day: r.day, time: r.time, timeH: r.time_h, timeM: r.time_m,
         label: r.label || '', belt: r.belt || '', progCss: r.prog_css || '',
         program: r.program || '', divisions: r.divisions || [],
-        defaultInstructor: r.default_instructor || '', duration: r.duration || 45
+        defaultInstructor: r.default_instructor || '', defaultInstructorId: r.default_instructor_id || null,
+        duration: r.duration || 45
       }));
     if (!rows.length) return;
     SCHEDULE_TEMPLATE.splice(0, SCHEDULE_TEMPLATE.length, ...rows);
@@ -4649,6 +4803,7 @@ async function publishScheduleTemplate() {
     program: t.program || null,
     divisions: (t.divisions && t.divisions.length) ? t.divisions : null,
     default_instructor: t.defaultInstructor || '',
+    default_instructor_id: t.defaultInstructorId || null,
     duration: t.duration || 45
   }));
   const { error } = await BTKD.sb.from('schedule_template').upsert(rows, { onConflict: 'day,time' });
@@ -4743,8 +4898,9 @@ function showCpApp(){
   document.getElementById('cp-login').style.display = 'none';
 }
 
-// Staff-only gate: the planner is for instructors/admin, not students.
-function cpIsStaff(){ return currentRole === 'admin' || currentRole === 'instructor'; }
+// Who gets in: admin and staff accounts, and accounts added as class planners
+// (Admin, Roster). Students do not.
+function cpIsStaff(){ return currentRole === 'admin' || currentRole === 'instructor' || isPlannerAccount; }
 function showCpDenied(){
   document.getElementById('cp-loading').style.display = 'none';
   document.getElementById('cp-login').style.display = 'none';
@@ -4793,10 +4949,21 @@ document.addEventListener('keydown', e => {
 async function loadUserProfile(){
   const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   currentRole = profile?.role || 'student';
-  const name = profile?.name || currentUser.email.split('@')[0];
+  const name = (profile?.name || '').trim() || currentUser.email.split('@')[0];
+  myAccount = { id: currentUser.id, name };
+  accountIsAdmin = currentRole === 'admin';
+  isAdmin = accountIsAdmin;
+  viewAs = null;
+  // A class planner is an ordinary account with a class_planners row.
+  isPlannerAccount = false;
+  if(!accountIsAdmin && currentRole !== 'instructor'){
+    const { data: pl } = await sb.from('class_planners').select('user_id').eq('user_id', currentUser.id).maybeSingle();
+    isPlannerAccount = !!pl;
+  }
   const chip = document.getElementById('userChip');
   if(chip) chip.textContent = name.split(' ')[0];
-  if(currentRole === 'admin'){ isAdmin = true; }
+  syncRoleChrome();
+  await loadPlanners();
 }
 
 async function handleAuthBtn(){
