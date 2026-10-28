@@ -33,14 +33,22 @@ function grab(name) {
 }
 
 const ctx = vm.createContext({ currentEntry: null });
-vm.runInContext([grabConst('CATS'), grabConst('KB_CATS'), grab('segCats'), grab('getCat')].join('\n') +
-  '\nthis.CATS = CATS; this.KB_CATS = KB_CATS;', ctx);
+vm.runInContext([grabConst('CATS'), grabConst('KB_CATS'), grabConst('BJJ_CATS'), grab('segCats'), grab('getCat')].join('\n'), ctx);
 const labels = list => Array.from(list, c => c.l); // an array from this realm, not the sandbox's
 
 test("a kickboxing class offers Race's kickboxing segments", () => {
   ctx.currentEntry = { label: 'Kickboxing', program: 'Kickboxing' };
   assert.deepStrictEqual(labels(ctx.segCats()), ['Stretching', 'Review', 'Warm Up', 'Boxing Combos', 'Kick Combos',
     "Hands'n'Feet Combos", 'New Techniques', 'New Combos', 'Cool Down', 'Bag Work', 'Thai Pads']);
+});
+
+test('a Jiu Jitsu class offers the jiu jitsu segments, however its label is written', () => {
+  const bjj = ['Warm Up', 'Stretching', 'Review', 'New Techniques', 'Drilling', 'Takedowns', 'Escapes',
+    'Submissions', 'Positional Rolling', 'Rolling', 'Cool Down'];
+  ctx.currentEntry = { label: 'Jiu Jitsu', program: 'Jiu Jitsu' };
+  assert.deepStrictEqual(labels(ctx.segCats()), bjj);
+  ctx.currentEntry = { label: 'Jiu-Jitsu (BJJ)', program: '' };
+  assert.deepStrictEqual(labels(ctx.segCats()), bjj);
 });
 
 test('Taekwondo classes keep their own segments', () => {

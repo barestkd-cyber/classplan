@@ -705,6 +705,14 @@ body.light .hdr-tab.active { background: var(--red); }
             <option value="newcombo">New Combos</option>
             <option value="thaipads">Thai Pads</option>
           </optgroup>
+          <optgroup label="Jiu Jitsu">
+            <option value="drilling">Drilling</option>
+            <option value="takedowns">Takedowns</option>
+            <option value="escapes">Escapes</option>
+            <option value="submissions">Submissions</option>
+            <option value="posrolling">Positional Rolling</option>
+            <option value="rolling">Rolling</option>
+          </optgroup>
         </select>
         <select id="libSegFilter" onchange="renderLibSegs()" style="flex:1;min-width:100px;background:var(--black);border:1px solid var(--bl);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:7px 9px;border-radius:3px;outline:none;appearance:none;-webkit-appearance:none;">
           <option value="">All Instructors</option>
@@ -1901,11 +1909,29 @@ const KB_CATS = [
   {v:'bags',      l:'Bag Work',            css:'cat-bags',     ph:'List each drill with its time, e.g. 3 rounds of 2 min.'},
   {v:'thaipads',  l:'Thai Pads',           css:'cat-breaking', ph:'Pad drills, who holds, round length, rotations.'},
 ];
-// The segment types for the class being planned.
+// Jiu Jitsu classes too (Race, 2026-10-28). Shared keys (warm up, stretching,
+// review, new techniques, cool down) match the kickboxing ones.
+const BJJ_CATS = [
+  {v:'warmup',     l:'Warm Up',            css:'cat-warmup',   ph:'Describe the warm-up: movements, rounds, time.'},
+  {v:'stretch',    l:'Stretching',         css:'cat-stretch',  ph:'Which stretches, and how long each?'},
+  {v:'review',     l:'Review',             css:'cat-games',    ph:'What from last class are you reviewing, and how?'},
+  {v:'newtech',    l:'New Techniques',     css:'cat-selfdef',  ph:'Which technique, and how will you break it down?'},
+  {v:'drilling',   l:'Drilling',           css:'cat-partner',  ph:'Which drill, reps or time, and partner rotations?'},
+  {v:'takedowns',  l:'Takedowns',          css:'cat-sparring', ph:'Which takedowns, and how will you drill them safely?'},
+  {v:'escapes',    l:'Escapes',            css:'cat-basics',   ph:'Which position, which escapes, and how many reps?'},
+  {v:'submissions',l:'Submissions',        css:'cat-forms',    ph:'Which submissions, from where, and how you will drill them.'},
+  {v:'posrolling', l:'Positional Rolling', css:'cat-bags',     ph:'Starting position, the goal for each side, round length.'},
+  {v:'rolling',    l:'Rolling',            css:'cat-breaking', ph:'Rounds, round length, how you will pair people.'},
+  {v:'cooldown',   l:'Cool Down',          css:'cat-cooldown', ph:'Stretch, breathing, announcements.'},
+];
+// The segment types for the class being planned. Jiu Jitsu is written
+// several ways on the schedule, so its label is matched like progCssOf does.
 function segCats() {
   const e = currentEntry;
-  const kickboxing = !!e && (e.program === 'Kickboxing' || /kickbox/i.test(String(e.label || '')));
-  return kickboxing ? KB_CATS : CATS;
+  if (!e) return CATS;
+  if (e.program === 'Kickboxing' || /kickbox/i.test(String(e.label || ''))) return KB_CATS;
+  if (e.program === 'Jiu Jitsu' || /(jiu|bjj)/i.test(String(e.label || ''))) return BJJ_CATS;
+  return CATS;
 }
 function getCat(v){return segCats().find(c=>c.v===v)||CATS.find(c=>c.v===v)||CATS[CATS.length-1];}
 
@@ -3681,7 +3707,8 @@ function renderLibSegs() {
   }
 
   const CAT_LABELS_MAP = {warmup:'Warm-Up',stretch:'Stretching',basics:'Basics',forms:'Forms',sparring:'Sparring',bags:'Bag Work',partner:'Partner Drills',selfdef:'Self-Defense',cooldown:'Cool-Down',other:'Other',
-    review:'Review',boxing:'Boxing Combos',kicks:'Kick Combos',handsfeet:"Hands'n'Feet Combos",newtech:'New Techniques',newcombo:'New Combos',thaipads:'Thai Pads'};
+    review:'Review',boxing:'Boxing Combos',kicks:'Kick Combos',handsfeet:"Hands'n'Feet Combos",newtech:'New Techniques',newcombo:'New Combos',thaipads:'Thai Pads',
+    drilling:'Drilling',takedowns:'Takedowns',escapes:'Escapes',submissions:'Submissions',posrolling:'Positional Rolling',rolling:'Rolling'};
 
   segs.forEach(seg => {
     const isMine = seg.creatorId === meId;
