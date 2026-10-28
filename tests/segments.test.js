@@ -69,7 +69,12 @@ test('a kickboxing segment keeps its own writing hint', () => {
 });
 
 test('the open segment list is readable in dark mode', () => {
-  assert.ok(/(^|\n)select option \{ background: var\(--surface\); color: var\(--text\); \}/.test(src.replace(/\r/g, '')));
+  const css = src.replace(/\r/g, '');
+  assert.ok(/(^|\n)select option \{ background: var\(--surface\); color: var\(--text\); \}/.test(css));
+  // Phones draw the list from the page's scheme, not from option styles.
+  assert.ok(/(^|\n)body \{ color-scheme: dark; \}/.test(css));
+  assert.ok(/(^|\n)body\.light \{ color-scheme: light; \}/.test(css));
+  assert.ok(/\.seg-cat select\{[^}]*background-color:var\(--dark\);\}/.test(css), 'the segment dropdown has a ground of its own');
 });
 
 console.log('segments: ' + passed + ' passed, ' + failed + ' failed');
