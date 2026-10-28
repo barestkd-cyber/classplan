@@ -4868,6 +4868,30 @@ function pushNav() {
   history.pushState({ nav: true }, '');
 }
 
+// Leaving the planner on a phone (to copy something from another app) and
+// coming back sent the page to the top, and the browser reopened the
+// keyboard on the last field, over the buttons. Leaving now lets go of the
+// field and notes where the page was; coming back puts it there again.
+const cpReturnTo = { win: 0, col: 0 };
+document.addEventListener('visibilitychange', () => {
+  const col = document.querySelector('#screen-plan.active .plan-edit-col');
+  if (document.hidden) {
+    cpReturnTo.win = window.scrollY;
+    cpReturnTo.col = col ? col.scrollTop : 0;
+    const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const field = document.activeElement;
+    if (touch && field && field !== document.body && typeof field.blur === 'function') field.blur();
+    return;
+  }
+  const restore = () => {
+    window.scrollTo(0, cpReturnTo.win);
+    if (col) col.scrollTop = cpReturnTo.col;
+  };
+  // Once now and once after the phone has finished redrawing the page.
+  requestAnimationFrame(restore);
+  setTimeout(restore, 300);
+});
+
 // ─── SUPABASE AUTH ────────────────────────────────────────────
 // Auth + the Supabase client come from the shared module (window.BTKD),
 // loaded via shared/auth.js. Reuse its client so existing sb.from(...) calls
