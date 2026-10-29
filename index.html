@@ -1567,7 +1567,7 @@ function buildReadOnlyPlan(container, entry) {
     el.id = 'ro-seg-' + i;
     el.dataset.index = i;
     el.innerHTML = `
-      <div class="ro-seg-top" onclick="this.parentElement.classList.toggle('open')">
+      <div class="ro-seg-top" onclick="roSegTap(this.parentElement)">
         <div><div class="ro-mins">${s.mins}</div><span class="ro-mins-lbl">min</span></div>
         <div style="flex:1;min-width:0;">
           <div class="ro-cat-name">${s.label}</div>
@@ -1585,13 +1585,29 @@ function buildReadOnlyPlan(container, entry) {
 // ═══════════════════════════════
 // LIVE CLOCK
 // ═══════════════════════════════
+// The segment the instructor last tapped. Until they tap one, the clock picks
+// the segment running now; after that their tap keeps the gold, and nothing
+// opens or closes except by a tap (Race, 2026-10-28: the gold stayed on the
+// clock's segment, and one Zach opened shut itself within seconds).
+let roPicked = -1;
+let roNow = -1; // the segment the clock says is running, -1 outside class
+
 function startLiveClock(entry) {
   if (clockInterval) clearInterval(clockInterval);
-  tickClock(entry);
+  roPicked = -1;
+  tickClock(entry, true);
   clockInterval = setInterval(() => tickClock(entry), 10000); // every 10s
 }
 
-function tickClock(entry) {
+function roSegEls() { return document.querySelectorAll('#roSegs .ro-seg'); }
+
+function roSegTap(el) {
+  el.classList.toggle('open');
+  roPicked = Number(el.dataset.index);
+  highlightSegment(roPicked, roNow);
+}
+
+function tickClock(entry, opening) {
   const now = new Date();
   const h = now.getHours(); const m = now.getMinutes();
   const ampm = h >= 12 ? 'PM' : 'AM';
@@ -1608,37 +1624,31 @@ function tickClock(entry) {
   const elapsed = nowMins - classStartMins;
   const totalDur = entry.duration || 45;
 
-  const segs = getSegsForEntry(entry);
-  if (elapsed < 0 || elapsed >= totalDur) {
-    clearSegHighlights(segs);
-    return;
+  roNow = -1;
+  if (elapsed >= 0 && elapsed < totalDur) {
+    let cumulative = 0;
+    getSegsForEntry(entry).forEach((s, i) => {
+      if (roNow === -1 && elapsed < cumulative + s.mins) roNow = i;
+      cumulative += s.mins;
+    });
   }
 
-  let cumulative = 0;
-  let activeIndex = -1;
-  segs.forEach((s, i) => {
-    if (activeIndex === -1 && elapsed < cumulative + s.mins) activeIndex = i;
-    cumulative += s.mins;
-  });
-
-  highlightSegment(activeIndex, segs);
+  if (roPicked >= 0) { highlightSegment(roPicked, roNow); return; }
+  highlightSegment(roNow, roNow);
+  if (roNow < 0) return;
+  // Opened mid-class, the plan shows the segment running now. As class moves
+  // on, the next one opens beside it. Nothing closes by itself.
+  if (opening) roSegEls().forEach(el => el.classList.toggle('open', Number(el.dataset.index) === roNow));
+  else { const el = document.getElementById('ro-seg-' + roNow); if (el) el.classList.add('open'); }
 }
 
-function clearSegHighlights(segs) {
-  (segs || []).forEach((_, i) => {
-    const el = document.getElementById('ro-seg-' + i);
-    if (el) { el.classList.remove('live-active','live-done'); }
-  });
-}
-
-function highlightSegment(activeIdx, segs) {
-  (segs || []).forEach((s, i) => {
-    const el = document.getElementById('ro-seg-' + i);
-    if (!el) return;
-    el.classList.remove('live-active','live-done');
-    if (i < activeIdx) { el.classList.add('live-done'); el.classList.remove('open'); }
-    if (i === activeIdx) { el.classList.add('live-active'); el.classList.add('open'); }
-    if (i > activeIdx) { el.classList.remove('open'); }
+// Gold on the segment picked. The ones the clock has passed dim, except the
+// gold one, so tapping ahead never fades the segment still running.
+function highlightSegment(goldIdx, nowIdx) {
+  roSegEls().forEach(el => {
+    const i = Number(el.dataset.index);
+    el.classList.toggle('live-active', i === goldIdx);
+    el.classList.toggle('live-done', i < nowIdx && i !== goldIdx);
   });
 }
 
